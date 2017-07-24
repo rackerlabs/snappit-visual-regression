@@ -1,9 +1,9 @@
-import * as path from 'path';
-import * as fs from 'fs';
+import * as fs from "fs";
+import * as path from "path";
 
-import * as _ from 'lodash';
-import * as Webdriver from 'selenium-webdriver';
-import {Config as WDMConfig} from 'webdriver-manager/built/lib/config';
+import * as _ from "lodash";
+import * as Webdriver from "selenium-webdriver";
+import {Config as WDMConfig} from "webdriver-manager/built/lib/config";
 
 export interface IConfigPaths {
     chromeExe: string;
@@ -26,8 +26,8 @@ export interface IConfig {
 export class Config implements IConfig {
     public browser: string;
     public threshold: number = 4;
-    public resolutions: string = '1366x768';
-    public screenshotsDir: string = './screenshots';
+    public resolutions: string = "1366x768";
+    public screenshotsDir: string = "./screenshots";
     public serverUrl: string;
     public useDirect: boolean = false;
     public paths: IConfigPaths;
@@ -36,7 +36,7 @@ export class Config implements IConfig {
     public sizes: Webdriver.ISize[];
 
     constructor(
-        options?: IConfig
+        options?: IConfig,
     ) {
         this.paths = this.getBinaryPaths();
         _.merge(this, options);
@@ -44,52 +44,52 @@ export class Config implements IConfig {
         this.validate();
     }
 
-    getBinaryPaths(): IConfigPaths {
-        let seleniumPath = WDMConfig.getSeleniumDir();
-        let updateJson = path.resolve(seleniumPath, 'update-config.json');
-        let updateConfig = JSON.parse(fs.readFileSync(updateJson).toString());
+    private getBinaryPaths(): IConfigPaths {
+        const seleniumPath = WDMConfig.getSeleniumDir();
+        const updateJson = path.resolve(seleniumPath, "update-config.json");
+        const updateConfig = JSON.parse(fs.readFileSync(updateJson).toString());
 
         return {
-            seleniumPath: seleniumPath,
-            chromeExe: <string> updateConfig.chrome.last,
-            geckoExe: <string> updateConfig.gecko.last
+            chromeExe: updateConfig.chrome.last as string,
+            geckoExe: updateConfig.gecko.last as string,
+            seleniumPath,
         };
-    };
+    }
 
-    parseResolutions(): Webdriver.ISize[] {
-        return this.resolutions.split(',').map((sizeStr: string) => {
-            let [width, height] = sizeStr.split('x').map((dim: string) => parseInt(dim.trim(), 10));
+    private parseResolutions(): Webdriver.ISize[] {
+        return this.resolutions.split(",").map((sizeStr: string) => {
+            const [width, height] = sizeStr.split("x").map((dim: string) => parseInt(dim.trim(), 10));
             return {
-                width: width,
-                height: height
+                height,
+                width,
             };
         });
     }
 
-    validate (): void {
-        let validBrowsers = [Webdriver.Browser.CHROME, Webdriver.Browser.FIREFOX];
+    private validate(): void {
+        const validBrowsers = [Webdriver.Browser.CHROME, Webdriver.Browser.FIREFOX];
 
-        let isValidBrowser = _.includes(validBrowsers, this.browser);
+        const isValidBrowser = _.includes(validBrowsers, this.browser);
         if (!this.useProvidedDriver && !isValidBrowser) {
             throw new Error('Configuration error:  Please set a "browser" of either "chrome" or "firefox".');
         }
 
         // useDirect and !_.isEmpty both return booleans, so we can !== them for an XOR.
-        let isValidLocation = this.useDirect !== !_.isEmpty(this.serverUrl);
+        const isValidLocation = this.useDirect !== !_.isEmpty(this.serverUrl);
         if (!this.useProvidedDriver && !isValidLocation) {
-            throw new Error('Configuration error:  Please do only one of the following:' +
+            throw new Error("Configuration error:  Please do only one of the following:" +
                 'set "useDirect => true" OR provide a "serverUrl" option.');
         }
 
-        let isValidThreshold = this.threshold && this.threshold >= 1 && this.threshold <= 100;
+        const isValidThreshold = this.threshold && this.threshold >= 1 && this.threshold <= 100;
         if (!isValidThreshold) {
             throw new Error('Configuration error:  Please set a "threshold" between 0 and 99%');
         }
 
         _.each(this.sizes, (size: Webdriver.ISize) => {
-            let {width, height} = size;
-            let isValidWidth = width >= 1 && width <= 9999;
-            let isValidHeight = height >= 1 && height <= 9999;
+            const {width, height} = size;
+            const isValidWidth = width >= 1 && width <= 9999;
+            const isValidHeight = height >= 1 && height <= 9999;
 
             if (!isValidWidth || !isValidHeight) {
                 throw new Error('Configuration error:  Please set "resolutions" as a comma separated' +
