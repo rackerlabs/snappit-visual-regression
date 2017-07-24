@@ -1,0 +1,30 @@
+{
+    "compilerOptions": {
+        "strict":true,
+        "strictNullChecks": true,
+        "declaration": true,
+        "target": "es6",
+        "lib": ["es6"],
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "types": [
+            "reflect-metadata",
+            "node",
+            "mocha"
+        ],
+        "baseUrl": ".",
+        "paths": {
+            "*": ["types/*"]
+        },
+        "outDir": "built"
+    },
+    "include": [
+        "src/index.ts",
+        "test/**/*.spec.ts"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
+}
