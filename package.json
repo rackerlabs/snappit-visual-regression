@@ -1,0 +1,58 @@
+{
+  "name": "snappit-visual-regression",
+  "version": "0.0.1",
+  "description": "A visual regression testing library for JavaScript",
+  "engines": {
+    "node": ">=6.9.x"
+  },
+  "main": "built/src/index.js",
+  "scripts": {
+    "webdriver": "webdriver-manager update && webdriver-manager start",
+    "postinstall": "webdriver-manager update",
+    "test": "npm run build; mocha built/test/*.spec.js",
+    "build:watch": "tsc -w",
+    "build": "tsc",
+    "clean": "rimraf ./built",
+    "server": "http-server ./test/public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jj4th/snappit-visual-regression.git"
+  },
+  "keywords": [
+    "testing",
+    "screenshots",
+    "visual",
+    "regression",
+    "selenium",
+    "mocha"
+  ],
+  "author": "J. Andrichak IV",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jj4th/snappit-visual-regression/issues"
+  },
+  "homepage": "https://github.com/jj4th/snappit-visual-regression#readme",
+  "devDependencies": {
+    "@types/chai": "^4.0.1",
+    "@types/lodash": "^4.14.68",
+    "@types/mocha": "^2.2.41",
+    "@types/node": "^6.0.80",
+    "@types/selenium-webdriver": "^3.0.4",
+    "chai": "^4.0.2",
+    "chai-as-promised": "^7.1.1",
+    "http-server": "^0.10.0",
+    "inversify": "^4.2.0",
+    "mocha": "^3.4.2",
+    "reflect-metadata": "^0.1.10",
+    "rimraf": "^2.6.1",
+    "typescript": "^2.4.1"
+  },
+  "dependencies": {
+    "lodash": "^4.17.4",
+    "pixelmatch": "4.0.2",
+    "pngjs": "3.2.0",
+    "selenium-webdriver": "3.4.0",
+    "webdriver-manager": "^12.0.6"
+  }
+}
