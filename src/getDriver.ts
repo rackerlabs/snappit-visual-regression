@@ -1,8 +1,8 @@
-import * as _ from 'lodash';
+import * as _ from "lodash";
 import * as Webdriver from "selenium-webdriver";
-import * as Chrome from 'selenium-webdriver/chrome';
-import * as Firefox from 'selenium-webdriver/firefox';
-import * as remote from 'selenium-webdriver/remote';
+import * as Chrome from "selenium-webdriver/chrome";
+import * as Firefox from "selenium-webdriver/firefox";
+import * as remote from "selenium-webdriver/remote";
 
 import {Config} from "./config";
 
@@ -10,64 +10,64 @@ import {Config} from "./config";
 type Promise<T> = Webdriver.promise.Promise<T>;
 
 // Utility type for abstracting across Chrome/Firefox.
-type IBrowserDriver = {
-    Driver: typeof Webdriver.WebDriver,
-    ServiceBuilder: typeof remote.DriverService.Builder
-};
+interface IBrowserDriver {
+    Driver: typeof Webdriver.WebDriver;
+    ServiceBuilder: typeof remote.DriverService.Builder;
+}
 
 // Webdriver defines a proxy ThenableWebDriver type, but does not provide a mixin class or factory.
 type Constructor<T> = new(...args: any[]) => T;
 
-function ThenableWebDriver<T extends Constructor<Webdriver.WebDriver>> (
-    Base: T
+function ThenableWebDriver<T extends Constructor<Webdriver.WebDriver>>(
+    Base: T,
 ): T {
     return class extends Base implements Webdriver.ThenableWebDriver {
         private pd: Promise<Webdriver.WebDriver>;
 
         constructor(
-            ...args: any[]
+            ...args: any[],
         ) {
 
             super(...args);
-            this.pd = super.getSession().then(session => {
+            this.pd = super.getSession().then((session) => {
                 return new Base(session, ...args.slice(1));
             });
         }
 
-        then<R>(
-            opt_callback?: (value: Webdriver.WebDriver) => Promise<R> | R,
-            opt_errback?: (error: any) => any
+        public then<R>(
+            optCallback?: (value: Webdriver.WebDriver) => Promise<R> | R,
+            optErrback?: (error: any) => any,
         ): Promise<R> {
 
-            return this.pd.then(opt_callback, opt_errback);
+            return this.pd.then(optCallback, optErrback);
         }
 
-        catch<R>(
-            errback: (err: any) => R | Promise<R>
+        public catch<R>(
+            errback: (err: any) => R | Promise<R>,
         ): Promise<R> {
 
             return this.pd.then(errback);
         }
-    }
+    };
 }
 
 function getDirectDriver(
     browser: IBrowserDriver,
     executor?: string,
-    options?: Firefox.Options
+    options?: Firefox.Options,
 ): Webdriver.ThenableWebDriver {
 
     // We don't want to build the service if executor is falsey.
-    let srv = executor ? new browser.ServiceBuilder(executor).build(): undefined;
+    const srv = executor ? new browser.ServiceBuilder(executor).build() : undefined;
 
     // We have to cast here because TypeScript has no way of knowing we've modified the return value of createSession.
-    return <Webdriver.ThenableWebDriver> ThenableWebDriver(browser.Driver).createSession(options, srv);
+    return ThenableWebDriver(browser.Driver).createSession(options, srv) as Webdriver.ThenableWebDriver;
 }
 
 function getRemoteDriver(
     browserName: string,
     serverUrl: string,
-    options: Firefox.Options
+    options: Firefox.Options,
 ): Webdriver.ThenableWebDriver {
 
     return new Webdriver.Builder()
@@ -78,12 +78,12 @@ function getRemoteDriver(
 }
 
 export function getDriver(
-    config: Config
+    config: Config,
 ): Webdriver.ThenableWebDriver {
 
     let browser: IBrowserDriver;
     let serviceBuilder: typeof remote.DriverService.Builder;
-    let executor: string = '';
+    let executor: string = "";
     let options: Firefox.Options;
 
     // Since we don't use chrome options we can just always set firefox options here.

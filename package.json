@@ -7,13 +7,16 @@
   },
   "main": "built/src/index.js",
   "scripts": {
-    "webdriver": "webdriver-manager update && webdriver-manager start",
+    "prelint": "npm run build",
+    "pretest": "npm run lint",
     "postinstall": "webdriver-manager update",
-    "test": "npm run build; mocha built/test/*.spec.js",
-    "build:watch": "tsc -w",
     "build": "tsc",
+    "build:watch": "chokidar '**/*.ts' -c 'npm run build'",
     "clean": "rimraf ./built",
-    "server": "http-server ./test/public"
+    "lint": "tslint {test,src}/*.ts",
+    "mockserver": "http-server ./test/public",
+    "test": "mocha built/test/*.spec.js",
+    "webdriver": "webdriver-manager update && webdriver-manager start"
   },
   "repository": {
     "type": "git",
@@ -41,11 +44,13 @@
     "@types/selenium-webdriver": "^3.0.4",
     "chai": "^4.0.2",
     "chai-as-promised": "^7.1.1",
+    "chokidar-cli": "^1.2.0",
     "http-server": "^0.10.0",
     "inversify": "^4.2.0",
     "mocha": "^3.4.2",
     "reflect-metadata": "^0.1.10",
     "rimraf": "^2.6.1",
+    "tslint": "^5.5.0",
     "typescript": "^2.4.1"
   },
   "dependencies": {

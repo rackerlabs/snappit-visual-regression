@@ -1,8 +1,8 @@
 // Type definitions for pixelmatch
 
 interface pmOptions {
-    threshold?: number,
-    includeAA?: boolean
+    threshold?: number;
+    includeAA?: boolean;
 }
 
 type pixelImageData = Buffer | Uint8Array;

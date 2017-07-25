@@ -18,8 +18,8 @@ interface PNGOptions {
     bgColor?: {
         red: number,
         green: number,
-        blue: number
-    }
+        blue: number,
+    };
 }
 
 interface PNGMetadata {
@@ -50,10 +50,10 @@ export declare class PNG extends stream.Writable {
     pipe(destination: stream.Writable): stream.Writable;
 
     static bitblt(src: PNG, dst: PNG, srcX: number, srcY: number,
-        width: number, height: number, deltaX: number, deltaY: number): void;
+                  width: number, height: number, deltaX: number, deltaY: number): void;
 
     bitblt(dst: PNG, srcX: number, srcY: number,
-        width: number, height: number, deltaX: number, deltaY: number): PNG;
+           width: number, height: number, deltaX: number, deltaY: number): PNG;
 
     static adjustGamma(): void;
 }
