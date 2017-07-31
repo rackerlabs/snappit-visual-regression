@@ -5,20 +5,18 @@ import * as fs from "fs-extra";
 import * as _ from "lodash";
 import {By, ThenableWebDriver, WebDriver} from "selenium-webdriver";
 
-import {Config, IConfig} from "../src/config";
+import {IConfig} from "../src/config";
 import {
-    $,
+    Screenshot,
     ScreenshotMismatchException,
     ScreenshotNotPresentException,
     ScreenshotSizeException,
-    Snappit,
-} from "../src/snappit";
-
-const WEBDRIVER_PATH = "./node_modules/.bin/webdriver-manager";
+} from "../src/screenshot";
+import {$, NoDriverSessionException, snap, Snappit} from "../src/snappit";
 
 function browserTest(
     name: string,
-    options: IConfig,
+    config: IConfig,
     driver?: ThenableWebDriver,
     skip?: boolean,
 ): void {
@@ -30,7 +28,7 @@ function browserTest(
         this.slow(2500);
 
         before(() => {
-            snappit = new Snappit(options, driver);
+            snappit = new Snappit(config, driver);
         });
 
         if (!driver) {
@@ -56,14 +54,15 @@ function browserTest(
     });
 }
 
-/* tslint:disable-next-line:no-namespace */ // This namespace is just used for declaration merging convenience for .skip
+// This namespace is just used for declaration merging convenience for .skip
+/* tslint:disable-next-line:no-namespace */
 namespace browserTest {
     export function skip(
         name: string,
-        options: IConfig,
+        config: IConfig,
         driver?: ThenableWebDriver,
     ): void {
-        browserTest(name, options, driver, true);
+        browserTest(name, config, driver, true);
     }
 }
 
@@ -115,6 +114,59 @@ describe("Snappit", () => {
 
     });
 
+    describe("$ and snap shorthand methods", function() {
+        let snappit: Snappit;
+        let driver: ThenableWebDriver;
+        this.timeout(15000);
+        this.slow(2500);
+
+        before(() => {
+            // Reset reference images
+
+            // Initialize Snappit
+            const config: IConfig = {
+                browser: "chrome",
+                screenshotsDir: "test/screenshots",
+                threshold: 0.1,
+                useDirect: true,
+            };
+
+            snappit = new Snappit(config);
+        });
+
+        describe("before 'snappit.start()", () => {
+            it("should throw an error on invoking '$'", () => {
+                const fn = $ as () => any;
+                expect(fn).to.throw(NoDriverSessionException);
+            });
+
+            it("should throw an error on invoking 'snap'", async () => {
+                const fn = snap as () => Promise<void>;
+                const error = await fn().catch((err) => err);
+                expect (error).to.be.an.instanceOf(NoDriverSessionException);
+            });
+        });
+
+        describe("after 'snappit.stop()", () => {
+            before(async () => {
+                driver = snappit.start();
+                await driver.get("http://localhost:8080/");
+                await snappit.stop();
+            });
+
+            it("should throw an error on invoking '$'", () => {
+                const fn = $ as () => any;
+                expect(fn).to.throw(NoDriverSessionException);
+            });
+
+            it("should throw an error on invoking 'snap'", async () => {
+                const fn = snap as () => Promise<void>;
+                const error = await fn().catch((err) => err);
+                expect (error).to.be.an.instanceOf(NoDriverSessionException);
+            });
+        });
+    });
+
     describe("when using an existing driver", () => {
         return null;
     });
@@ -129,14 +181,14 @@ describe("Snappit", () => {
             // Reset reference images
 
             // Initialize Snappit
-            const options: IConfig = {
+            const config: IConfig = {
                 browser: "chrome",
                 screenshotsDir: "test/screenshots",
                 threshold: 0.1,
                 useDirect: true,
             };
 
-            snappit = new Snappit(options);
+            snappit = new Snappit(config);
             driver = snappit.start();
             await driver.get("http://localhost:8080/");
         });
@@ -151,30 +203,30 @@ describe("Snappit", () => {
          * it will not error.
          */
         it("should throw an error and save if the screenshot does not exist", async () => {
-            const error = await snappit.snap("does-not-exist.png", $("#color-div")).catch((err) => err);
-            expect(error).to.be.instanceof(ScreenshotNotPresentException);
+            const error = await snap("does-not-exist.png", $("#color-div")).catch((err) => err);
+            expect(error).to.be.an.instanceof(ScreenshotNotPresentException);
             expect(fs.existsSync("./test/screenshots/does-not-exist.png")).to.eql(true);
         });
 
         it("should throw an error and save if the screenshot is a different size", async () => {
-            const error = await snappit.snap("different-size.png", $("#color-div")).catch((err) => err);
-            expect(error).to.instanceof(ScreenshotSizeException);
+            const error = await snap("different-size.png", $("#color-div")).catch((err) => err);
+            expect(error).to.be.an.instanceof(ScreenshotSizeException);
             expect(fs.statSync("./test/screenshots/different-size.png").size).to.not.eql(1164);
         });
 
         it("should throw an error and save if the screenshot is different above threshold", async () => {
-            const error = await snappit.snap("different-above-threshold.png", $("#color-div")).catch((err) => err);
-            expect(error).to.instanceof(ScreenshotMismatchException);
+            const error = await snap("different-above-threshold.png", $("#color-div")).catch((err) => err);
+            expect(error).to.be.an.instanceof(ScreenshotMismatchException);
             expect(fs.statSync("./test/screenshots/different-above-threshold.png").size).to.not.eql(1102);
         });
 
         it("should not throw an error or save if the screenshot is different below threshold", async () => {
-            await snappit.snap("different-below-threshold.png", $("#color-div"));
+            await snap("different-below-threshold.png", $("#color-div"));
             expect(fs.statSync("./test/screenshots/different-below-threshold.png").size).to.eql(1157);
         });
 
         it("should not throw an error or save if the screenshot shows no difference", async () => {
-            await snappit.snap("no-difference.png", $("#color-div"));
+            await snap("no-difference.png", $("#color-div"));
             expect(fs.statSync("./test/screenshots/no-difference.png").size).to.eql(370);
         });
     });

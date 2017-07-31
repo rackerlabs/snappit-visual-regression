@@ -1,59 +1,61 @@
-/* tslint:disable:no-console */
 import * as fs from "fs-extra";
-import * as _ from "lodash";
 import * as path from "path";
 import {PNG} from "pngjs";
 import {
-    By,
-    error as WebDriverError,
-    ThenableWebDriver,
-    WebDriver,
-    WebElement,
-    WebElementPromise,
+    By, error as WebDriverError, ThenableWebDriver,
+    WebDriver, WebElement, WebElementPromise,
 } from "selenium-webdriver";
 
-import {Config, IConfig} from "./config";
+import {IConfig, prepareConfig} from "./config";
 import {getDriver} from "./getDriver";
+import {
+    Screenshot,
+    ScreenshotMismatchException,
+    ScreenshotNotPresentException,
+    ScreenshotSizeException,
+} from "./screenshot";
+
+/**
+ * Snappit exposes shortcuts to its public `$` and `snap` methods.  These methods
+ * are only valid with a current Snappit session.  We declare their initial state to return
+ * a `NoDriverSessionException` and modify them in the `start()` and `stop()` routines.
+ */
+export type ISnap = (name: string, element: WebElementPromise) => Promise<void>;
+const snapPreInit: ISnap = async () => {
+    throw new NoDriverSessionException();
+};
+export let snap: ISnap = snapPreInit;
 
 export type IFindByCss = (selector: string) => WebElementPromise;
-
-export let $ = (search: string): WebElementPromise => {
-    throw new Error("You must call `new Snappit(config).start();` before invoking this method.");
+const $PreInit: IFindByCss = () => {
+    throw new NoDriverSessionException();
 };
+export let $: IFindByCss = $PreInit;
 
-export class ScreenshotMismatchException extends Error {
-    constructor(message = "Screenshots do not match within threshold.") {
-        super(message);
-    }
-}
-export class ScreenshotNotPresentException extends Error {
-    constructor(message = "No previous screenshot found.") {
-        super(message);
-    }
-}
-export class ScreenshotSizeException extends Error {
-    constructor(message = "Screenshots differ with respect to dimension.") {
+/**
+ * Custom errors related to the Snappit class.
+ */
+export class NoDriverSessionException extends Error {
+    constructor(message = "You must call 'new Snappit(config).start();' before invoking this method.") {
         super(message);
     }
 }
 
 export class Snappit {
-    private config: Config;
+    private config: IConfig;
     private driver: ThenableWebDriver;
 
     constructor(
-        options: IConfig,
+        config: IConfig,
         driver?: ThenableWebDriver,
     ) {
         if (driver instanceof WebDriver) {
-            options.useProvidedDriver = true;
+            config.useProvidedDriver = true;
         }
 
-        this.config = new Config(options);
+        this.config = prepareConfig(config);
 
-        $ = (selector: string): WebElementPromise => {
-            return this.driver.findElement(By.css(selector));
-        };
+        // Update the global selector function
     }
 
     public start(): ThenableWebDriver {
@@ -61,10 +63,18 @@ export class Snappit {
             this.driver = getDriver(this.config);
         }
 
+        // Update the exported shorthand methods
+        $ = this.$.bind(this);
+        snap = this.snap.bind(this);
+
         return this.driver;
     }
 
     public async stop(): Promise<void> {
+        // Update the exported shorthand methods
+        $ = $PreInit;
+        snap = snapPreInit;
+
         try {
             await this.driver.close();
             await this.driver.quit();
@@ -73,51 +83,36 @@ export class Snappit {
         }
     }
 
-    public async snap(name: string, element: WebElementPromise): Promise<void> {
-        const fileName = name.replace(/.png$/, "").replace(/\W+/gi, "-") + ".png";
-        const screenshotPath = path.relative(".", this.config.screenshotsDir);
-        const filePath = path.join(screenshotPath, fileName);
+    public $(
+        selector: string,
+    ): WebElementPromise {
+        return this.driver.findElement(By.css(selector));
+    }
 
-        /**
-         * Screenshot the entire browser, then crop the image to the element.
-         * We use this method because not all drivers implement WebElement.takeScreenshot
-         */
-        const elemSize = await element.getSize();
-        const elemLoc = await element.getLocation();
-
-        const browserShot = new Buffer(await this.driver.takeScreenshot(), "base64");
-        const browserPng = PNG.sync.read(browserShot);
-        const newPng = new PNG(elemSize);
-        PNG.bitblt(browserPng, newPng, elemLoc.x, elemLoc.y, elemSize.width, elemSize.height, 0, 0);
+    public async snap(
+        name: string,
+        element: WebElementPromise,
+    ): Promise<void> {
+        const filePath = Screenshot.buildPath(name, this.config.screenshotsDir);
+        const newShot = await Screenshot.fromElement(this.driver, element);
 
         // Baseline image exists
         if (fs.existsSync(filePath)) {
-            const oldPng = PNG.sync.read(fs.readFileSync(filePath));
+            const oldShot = Screenshot.fromPath(filePath);
 
-            const sameWidth = (oldPng.width === newPng.width);
-            const sameHeight = (oldPng.height === newPng.height);
-            if (!sameWidth || !sameHeight) {
-                fs.writeFileSync(filePath, PNG.sync.write(newPng));
+            if (!newShot.isSameSize(oldShot)) {
+                newShot.saveToPath(filePath);
                 throw new ScreenshotSizeException();
             }
 
-            let pixelDiff = 0;
-            const bufferLength = oldPng.data.length;
-            for (let x =  0; x < bufferLength; x++) {
-                if (newPng.data[x] !== oldPng.data[x]) {
-                    pixelDiff++;
-                }
-            }
-
-            const percentChanged = pixelDiff / (oldPng.width * oldPng.height);
-            if (percentChanged > this.config.threshold) {
-                fs.writeFileSync(filePath, PNG.sync.write(newPng));
+            if (newShot.percentDiff(oldShot) > this.config.threshold) {
+                newShot.saveToPath(filePath);
                 throw new ScreenshotMismatchException();
             }
 
         // No baseline image
         } else {
-            fs.writeFileSync(filePath, PNG.sync.write(newPng));
+            newShot.saveToPath(filePath);
             throw new ScreenshotNotPresentException();
         }
     }
