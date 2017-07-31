@@ -8,7 +8,7 @@
   "main": "built/src/index.js",
   "scripts": {
     "prelint": "npm run build",
-    "pretest": "npm run lint",
+    "pretest": "npm run lint && npm run test:setup",
     "postinstall": "scripts/webdriver-update",
     "build": "tsc",
     "build:watch": "chokidar '**/*.ts' -c 'npm run build'",
@@ -16,6 +16,7 @@
     "lint": "tslint {test,src}/*.ts",
     "mockserver": "http-server ./test/public",
     "test": "mocha built/test/*.spec.js",
+    "test:setup": "rm ./test/screenshots/*.png; cp ./test/screenshots/reference/* ./test/screenshots",
     "webdriver": "scripts/webdriver-update && scripts/webdriver-start"
   },
   "repository": {
@@ -54,8 +55,9 @@
     "typescript": "^2.4.2"
   },
   "dependencies": {
+    "@types/fs-extra": "^4.0.0",
+    "fs-extra": "^4.0.1",
     "lodash": "^4.17.4",
-    "pixelmatch": "4.0.2",
     "pngjs": "3.2.0",
     "selenium-webdriver": "3.4.0"
   }

@@ -49,18 +49,15 @@ export declare class PNG extends stream.Writable {
     pipe(destination: PNG): PNG;
     pipe(destination: stream.Writable): stream.Writable;
 
-    static bitblt(src: PNG, dst: PNG, srcX: number, srcY: number,
-                  width: number, height: number, deltaX: number, deltaY: number): void;
-
-    bitblt(dst: PNG, srcX: number, srcY: number,
-           width: number, height: number, deltaX: number, deltaY: number): PNG;
-
     static adjustGamma(): void;
 }
 
 export declare namespace PNG {
     namespace sync {
         function read(buffer: string | Buffer, options?: PNGOptions): PNG;
-        function write(png: string | Buffer, options?: PNGOptions): PNG;
+        function write(png: PNG, options?: PNGOptions): Buffer;
     }
+
+    function bitblt(src: PNG, dst: PNG, srcX: number, srcY: number,
+        width: number, height: number, deltaX: number, deltaY: number): PNG;
 }
