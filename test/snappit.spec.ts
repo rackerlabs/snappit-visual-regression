@@ -19,7 +19,7 @@ function browserTest(
 
     suiteFn(name, function() {
         let snappit: Snappit;
-        this.timeout(5000);
+        this.timeout(15000);
         this.slow(2500);
 
         before(() => {
