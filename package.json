@@ -51,7 +51,7 @@
     "reflect-metadata": "^0.1.10",
     "rimraf": "^2.6.1",
     "tslint": "^5.5.0",
-    "typescript": "^2.4.1"
+    "typescript": "^2.4.2"
   },
   "dependencies": {
     "lodash": "^4.17.4",

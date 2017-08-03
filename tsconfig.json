@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
         "strict":true,
-        "strictNullChecks": true,
+        "strictNullChecks": false,
         "declaration": true,
         "target": "es6",
         "lib": ["es6"],
