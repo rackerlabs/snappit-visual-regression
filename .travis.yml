@@ -8,6 +8,12 @@ addons:
   chrome: stable
 install:
   - travis_retry npm install
+  - mkdir -p node_modules/webdriver-manager/selenium
+  - curl https://${GH_TOKEN}@api.github.com/repos/mozilla/geckodriver/releases | python -m json.tool > node_modules/webdriver-manager/selenium/gecko-response.json
+  - wget -q https://{GH_TOKEN}@github.com/mozilla/geckodriver/releases/download/v0.18.0/geckodriver-v0.18.0-linux64.tar.gz -O node_modules/webdriver-manager/selenium/geckodriver-v0.18.0.tar.gz
+  - yes | cp update-config.json node_modules/webdriver-manager/selenium/
+  - tar -xzf node_modules/webdriver-manager/selenium/geckodriver-v0.18.0.tar.gz -C node_modules/webdriver-manager/selenium
+  - mv -f node_modules/webdriver-manager/selenium/geckodriver{,-v0.18.0}
   - npm i -g greenkeeper-lockfile@1
 before_script:
   - greenkeeper-lockfile-update
