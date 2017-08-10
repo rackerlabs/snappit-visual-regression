@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+java -Dwebdriver.gecko.driver=bin/selenium/geckodriver-v0.18.0 \
+     -Dwebdriver.chrome.driver=bin/selenium/chromedriver_2.31 \
+     -jar bin/selenium/selenium-server-standalone-3.4.0.jar \
+     -port 4444

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+rm bin/selenium/*
+
+wget -q https://{GH_TOKEN}@github.com/mozilla/geckodriver/releases/download/v0.18.0/geckodriver-v0.18.0-linux64.tar.gz -O bin/selenium/geckodriver-v0.18.0.tar.gz
+wget -q https://chromedriver.storage.googleapis.com/2.31/chromedriver_linux64.zip -O bin/selenium/chromedriver_2.31.zip
+wget -q https://selenium-release.storage.googleapis.com/3.4/selenium-server-standalone-3.4.0.jar -O bin/selenium/selenium-server-standalone-3.4.0.jar
+tar -xzf bin/selenium/geckodriver-v0.18.0.tar.gz -C bin/selenium/
+mv -f bin/selenium/geckodriver{,-v0.18.0}
+unzip bin/selenium/chromedriver_2.31.zip -d bin/selenium/
