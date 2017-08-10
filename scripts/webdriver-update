@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-rm bin/selenium/*
+find bin/selenium/. ! -name '.gitignore' -type f -exec rm -f {} +
 
 platform_gecko='linux64'
 platform_chrome='linux64'

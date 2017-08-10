@@ -21,6 +21,3 @@ node_modules
 
 # Typescript exclusions
 built/
-
-# Travis stuff
-bin/selenium/*
