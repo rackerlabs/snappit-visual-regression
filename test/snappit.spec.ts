@@ -7,8 +7,11 @@ import {By, ThenableWebDriver, WebDriver} from "selenium-webdriver";
 
 import {Config, IConfig} from "../src/config";
 import {
-    $, ScreenshotMismatchException, ScreenshotNotPresentException,
-    ScreenshotSizeException, Snappit,
+    $,
+    ScreenshotMismatchException,
+    ScreenshotNotPresentException,
+    ScreenshotSizeException,
+    Snappit,
 } from "../src/snappit";
 
 const WEBDRIVER_PATH = "./node_modules/.bin/webdriver-manager";

@@ -14,7 +14,7 @@ import {getDriver} from "./getDriver";
 export type IFindByCss = (selector: string) => WebElementPromise;
 
 export let $ = (search: string): WebElementPromise => {
-    throw new Error("You must call 'new Snappit(config).start();' before invoking this method.");
+    throw new Error("You must call `new Snappit(config).start();` before invoking this method.");
 };
 
 export class ScreenshotMismatchException extends Error {
