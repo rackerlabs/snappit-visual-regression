@@ -4,8 +4,12 @@ import * as _ from "lodash";
 import * as path from "path";
 import {PNG} from "pngjs";
 import {
-    By, error as WebDriverError, ThenableWebDriver,
-    WebDriver, WebElement, WebElementPromise,
+    By,
+    error as WebDriverError,
+    ThenableWebDriver,
+    WebDriver,
+    WebElement,
+    WebElementPromise,
 } from "selenium-webdriver";
 
 import {Config, IConfig} from "./config";
