@@ -40,7 +40,7 @@
     "@types/chai": "^4.0.1",
     "@types/lodash": "^4.14.68",
     "@types/mocha": "^2.2.41",
-    "@types/node": "^6.0.80",
+    "@types/node": "^8.0.19",
     "@types/selenium-webdriver": "^3.0.4",
     "chai": "^4.0.2",
     "chai-as-promised": "^7.1.1",
@@ -57,6 +57,6 @@
     "lodash": "^4.17.4",
     "pixelmatch": "4.0.2",
     "pngjs": "3.2.0",
-    "selenium-webdriver": "3.4.0"
+    "selenium-webdriver": "3.5.0"
   }
 }
