@@ -3,7 +3,6 @@ import * as path from "path";
 
 import * as _ from "lodash";
 import * as Webdriver from "selenium-webdriver";
-import {Config as WDMConfig} from "webdriver-manager/built/lib/config";
 
 export interface IConfigPaths {
     chromeExe: string;
@@ -45,13 +44,13 @@ export class Config implements IConfig {
     }
 
     private getBinaryPaths(): IConfigPaths {
-        const seleniumPath = WDMConfig.getSeleniumDir();
-        const updateJson = path.resolve(seleniumPath, "update-config.json");
-        const updateConfig = JSON.parse(fs.readFileSync(updateJson).toString());
+        const seleniumPath = "bin/selenium/";
+        const geckoExe = path.resolve(seleniumPath, "geckodriver-v0.18.0");
+        const chromeExe = path.resolve(seleniumPath, "chromedriver_2.31");
 
         return {
-            chromeExe: updateConfig.chrome.last as string,
-            geckoExe: updateConfig.gecko.last as string,
+            chromeExe,
+            geckoExe,
             seleniumPath,
         };
     }
