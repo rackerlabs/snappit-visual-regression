@@ -9,14 +9,14 @@
   "scripts": {
     "prelint": "npm run build",
     "pretest": "npm run lint",
-    "postinstall": "webdriver-manager update",
+    "postinstall": "scripts/webdriver-update",
     "build": "tsc",
     "build:watch": "chokidar '**/*.ts' -c 'npm run build'",
     "clean": "rimraf ./built",
     "lint": "tslint {test,src}/*.ts",
     "mockserver": "http-server ./test/public",
     "test": "mocha built/test/*.spec.js",
-    "webdriver": "webdriver-manager update && webdriver-manager start"
+    "webdriver": "scripts/webdriver-update && scripts/webdriver-start"
   },
   "repository": {
     "type": "git",
@@ -51,13 +51,12 @@
     "reflect-metadata": "^0.1.10",
     "rimraf": "^2.6.1",
     "tslint": "^5.5.0",
-    "typescript": "^2.4.1"
+    "typescript": "^2.4.2"
   },
   "dependencies": {
     "lodash": "^4.17.4",
     "pixelmatch": "4.0.2",
     "pngjs": "3.2.0",
-    "selenium-webdriver": "3.5.0",
-    "webdriver-manager": "^12.0.6"
+    "selenium-webdriver": "3.5.0"
   }
 }
