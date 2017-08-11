@@ -21,3 +21,6 @@ node_modules
 
 # Typescript exclusions
 built/
+
+# Test images
+test/screenshots/*.png

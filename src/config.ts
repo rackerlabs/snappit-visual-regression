@@ -1,4 +1,4 @@
-import * as fs from "fs";
+import * as fs from "fs-extra";
 import * as path from "path";
 
 import * as _ from "lodash";
@@ -24,7 +24,7 @@ export interface IConfig {
 
 export class Config implements IConfig {
     public browser: string;
-    public threshold: number = 4;
+    public threshold: number = 0.04;
     public resolutions: string = "1366x768";
     public screenshotsDir: string = "./screenshots";
     public serverUrl: string;
@@ -80,9 +80,9 @@ export class Config implements IConfig {
                 'set "useDirect => true" OR provide a "serverUrl" option.');
         }
 
-        const isValidThreshold = this.threshold && this.threshold >= 1 && this.threshold <= 100;
+        const isValidThreshold = this.threshold && this.threshold >= 0 && this.threshold <= 0.99;
         if (!isValidThreshold) {
-            throw new Error('Configuration error:  Please set a "threshold" between 0 and 99%');
+            throw new Error('Configuration error:  Please set a "threshold" between 0 and 0.99');
         }
 
         _.each(this.sizes, (size: Webdriver.ISize) => {
