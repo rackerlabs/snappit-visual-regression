@@ -3,7 +3,6 @@ import * as path from "path";
 
 import * as _ from "lodash";
 import * as Webdriver from "selenium-webdriver";
-import {Config as WDMConfig} from "webdriver-manager/built/lib/config";
 
 export interface IConfigPaths {
     chromeExe: string;
@@ -48,8 +47,8 @@ function getBinaryPaths(): IConfigPaths {
     const chromeExe = path.resolve(seleniumPath, "chromedriver");
 
     return {
-        chromeExe: chromeExe,
-        geckoExe: geckoExe,
+        chromeExe,
+        geckoExe,
         seleniumPath,
     };
 }
