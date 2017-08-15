@@ -44,8 +44,8 @@ const defaultConfig: IConfig = {
 
 function getBinaryPaths(): IConfigPaths {
     const seleniumPath = "bin/selenium/";
-    const geckoExe = path.resolve(seleniumPath, "geckodriver-v0.18.0");
-    const chromeExe = path.resolve(seleniumPath, "chromedriver_2.31");
+    const geckoExe = path.resolve(seleniumPath, "geckodriver");
+    const chromeExe = path.resolve(seleniumPath, "chromedriver");
 
     return {
         chromeExe: chromeExe,
