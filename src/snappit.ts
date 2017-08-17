@@ -20,7 +20,7 @@ import {
  * are only valid with a current Snappit session.  We declare their initial state to return
  * a `NoDriverSessionException` and modify them in the `start()` and `stop()` routines.
  */
-export type ISnap = (name: string, element: WebElementPromise) => Promise<void>;
+export type ISnap = (name: string, element?: WebElementPromise) => Promise<void>;
 const snapPreInit: ISnap = async () => {
     throw new NoDriverSessionException();
 };
@@ -91,10 +91,10 @@ export class Snappit {
 
     public async snap(
         name: string,
-        element: WebElementPromise,
+        element?: WebElementPromise,
     ): Promise<void> {
-        const filePath = Screenshot.buildPath(name, this.config.screenshotsDir);
-        const newShot = await Screenshot.fromElement(this.driver, element);
+        const filePath = await Screenshot.buildPath(name, this.driver, this.config.screenshotsDir);
+        const newShot = await Screenshot.take(this.driver, element);
 
         // Baseline image exists
         if (fs.existsSync(filePath)) {

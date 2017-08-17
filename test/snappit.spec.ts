@@ -190,6 +190,7 @@ describe("Snappit", () => {
 
             snappit = new Snappit(config);
             driver = snappit.start();
+            await driver.manage().window().setSize(1366, 768);
             await driver.get("http://localhost:8080/");
         });
 
@@ -228,6 +229,20 @@ describe("Snappit", () => {
         it("should not throw an error or save if the screenshot shows no difference", async () => {
             await snap("no-difference.png", $("#color-div"));
             expect(fs.statSync("./test/screenshots/no-difference.png").size).to.eql(370);
+        });
+
+        it("should take a screenshot with directory and path tokens", async () => {
+            // Version will regularly change.
+            const version = (await driver.getCapabilities()).get("version").replace(/\W+/gi, "-");
+
+            // This will error because the screenshot does not exist, but we only care if it's created correctly.
+            await snap("{browserName}/{browserVersion}/{resolution}/test.png").catch((err) => err);
+            expect(fs.statSync(`./test/screenshots/chrome/${version}/1366x768/test.png`).size).to.eql(8109);
+        });
+
+        it("should take a fullscreen screesnhot that is the correct dimensions", async () => {
+            await snap("fullscreen.png");
+            expect(fs.statSync("./test/screenshots/fullscreen.png").size).to.eql(8109);
         });
     });
 });

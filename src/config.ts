@@ -13,7 +13,6 @@ export interface IConfigPaths {
 export interface IConfig {
     browser?: string;
     paths?: IConfigPaths;
-    resolutions?: string | Webdriver.ISize[];
     screenshotsDir?: string;
     serverUrl?: string;
     threshold?: number;
@@ -33,7 +32,6 @@ export function prepareConfig(config: IConfig): IConfig {
 const defaultConfig: IConfig = {
     browser: "chrome",
     paths: getBinaryPaths(),
-    resolutions: [{width: 1366, height: 768}],
     screenshotsDir: "./screenshots",
     threshold: 0.04,
     useDirect: false,
@@ -51,22 +49,6 @@ function getBinaryPaths(): IConfigPaths {
         geckoExe,
         seleniumPath,
     };
-}
-
-function parseResolutions(
-    resolutions: string | Webdriver.ISize[],
-): Webdriver.ISize[] {
-    if (Array.isArray(resolutions)) {
-        return resolutions;
-    }
-
-    return resolutions.split(",").map((sizeStr: string) => {
-        const [width, height] = sizeStr.split("x").map((dim: string) => parseInt(dim.trim(), 10));
-        return {
-            height,
-            width,
-        };
-    });
 }
 
 function validateConfig(
@@ -90,15 +72,4 @@ function validateConfig(
     if (!isValidThreshold) {
         throw new Error('Configuration error:  Please set a "threshold" between 0 and 0.99');
     }
-
-    _.each(config.resolutions, (size: Webdriver.ISize) => {
-        const {width, height} = size;
-        const isValidWidth = width >= 1 && width <= 9999;
-        const isValidHeight = height >= 1 && height <= 9999;
-
-        if (!isValidWidth || !isValidHeight) {
-            throw new Error('Configuration error:  Please set "resolutions" as a comma separated' +
-                'list in "WIDTHxHEIGHT" format.  Resolutions must be between "1x1" and "9999x9999"');
-        }
-    });
 }
