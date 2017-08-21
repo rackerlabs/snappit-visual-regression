@@ -190,7 +190,7 @@ describe("Snappit", () => {
 
             snappit = new Snappit(config);
             driver = snappit.start();
-            await driver.manage().window().setSize(1366, 768);
+            await driver.manage().window().setSize(960, 768); // Slightly smaller than TravisCI
             await driver.get("http://localhost:8080/");
         });
 
@@ -237,12 +237,12 @@ describe("Snappit", () => {
 
             // This will error because the screenshot does not exist, but we only care if it's created correctly.
             await snap("{browserName}/{browserVersion}/{resolution}/test.png").catch((err) => err);
-            expect(fs.statSync(`./test/screenshots/chrome/${version}/1366x768/test.png`).size).to.eql(8109);
+            expect(fs.statSync(`./test/screenshots/chrome/${version}/960x768/test.png`).size).to.eql(7152);
         });
 
         it("should take a fullscreen screesnhot that is the correct dimensions", async () => {
             await snap("fullscreen.png");
-            expect(fs.statSync("./test/screenshots/fullscreen.png").size).to.eql(8109);
+            expect(fs.statSync("./test/screenshots/fullscreen.png").size).to.eql(7152);
         });
     });
 });
