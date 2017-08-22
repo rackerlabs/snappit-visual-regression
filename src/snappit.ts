@@ -102,10 +102,6 @@ export class Snappit {
 
             if (!newShot.isSameSize(oldShot)) {
                 newShot.saveToPath(filePath);
-                /* tslint:disable-next-line:no-console */
-                console.log(oldShot.png.height, oldShot.png.width);
-                /* tslint:disable-next-line:no-console */
-                console.log(newShot.png.height, newShot.png.width);
                 throw new ScreenshotSizeException();
             }
 

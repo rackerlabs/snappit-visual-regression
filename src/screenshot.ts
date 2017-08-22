@@ -2,7 +2,7 @@ import * as fs from "fs-extra";
 import * as path from "path";
 import {PNG} from "pngjs";
 import {
-    By, error as WebDriverError, ThenableWebDriver,
+    By, error as WebDriverError, ISize, ThenableWebDriver,
     WebDriver, WebElement, WebElementPromise,
 } from "selenium-webdriver";
 
@@ -21,7 +21,7 @@ export class Screenshot {
         return path.join(screenshotPath, name)
             .replace("{browserName}", capabilities.get("browserName"))
             .replace("{browserVersion}", capabilities.get("version"))
-            .replace("{resolution}", `${size.width}x${size.height}`)
+            .replace("{browserSize}", `${size.width}x${size.height}`)
             .replace(/.png$/, "")
             .split(path.sep)
             .map((value) => value.replace(/\W+/gi, "-"))

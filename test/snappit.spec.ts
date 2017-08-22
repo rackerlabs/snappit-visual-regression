@@ -3,7 +3,7 @@ import * as childProcess from "child_process";
 import {expect} from "chai";
 import * as fs from "fs-extra";
 import * as _ from "lodash";
-import {By, ThenableWebDriver, WebDriver} from "selenium-webdriver";
+import {By, ISize, ThenableWebDriver, WebDriver} from "selenium-webdriver";
 
 import {IConfig} from "../src/config";
 import {
@@ -13,6 +13,22 @@ import {
     ScreenshotSizeException,
 } from "../src/screenshot";
 import {$, NoDriverSessionException, snap, Snappit} from "../src/snappit";
+
+async function setViewportSize(
+    driver: ThenableWebDriver,
+    size: ISize,
+): Promise<void> {
+    const jsGetPadding: string = `return {
+        width: window.outerWidth - window.innerWidth,
+        height: window.outerHeight - window.innerHeight
+    }`;
+
+    const padding: ISize = await driver.executeScript(jsGetPadding) as ISize;
+    return driver.manage().window().setSize(
+        size.width + padding.width,
+        size.height + padding.height,
+    );
+}
 
 function browserTest(
     name: string,
@@ -190,7 +206,7 @@ describe("Snappit", () => {
 
             snappit = new Snappit(config);
             driver = snappit.start();
-            await driver.manage().window().setSize(960, 768); // Slightly smaller than TravisCI
+            await setViewportSize(driver, {width: 960, height: 768}); // Slightly smaller than TravisCI
             await driver.get("http://localhost:8080/");
         });
 
@@ -232,17 +248,23 @@ describe("Snappit", () => {
         });
 
         it("should take a screenshot with directory and path tokens", async () => {
-            // Version will regularly change.
+            /**
+             * We need the image to be the same size to validate, but the browser size.  This is a
+             * result of the viewport size varying between potential test platforms.  Also the version
+             * of chrome we use to test may regularly change.  This test does somewhat overfit.
+             */
+            const size = await driver.manage().window().getSize();
             const version = (await driver.getCapabilities()).get("version").replace(/\W+/gi, "-");
+            const path = `./test/screenshots/chrome/${version}/${size.width}x${size.height}/test.png`;
 
             // This will error because the screenshot does not exist, but we only care if it's created correctly.
-            await snap("{browserName}/{browserVersion}/{resolution}/test.png").catch((err) => err);
-            expect(fs.statSync(`./test/screenshots/chrome/${version}/960x768/test.png`).size).to.eql(7152);
+            await snap("{browserName}/{browserVersion}/{browserSize}/test.png").catch((err) => err);
+            expect(fs.statSync(path).size).to.eql(7805);
         });
 
         it("should take a fullscreen screesnhot that is the correct dimensions", async () => {
             await snap("fullscreen.png");
-            expect(fs.statSync("./test/screenshots/fullscreen.png").size).to.eql(7152);
+            expect(fs.statSync("./test/screenshots/fullscreen.png").size).to.eql(7805);
         });
     });
 });
