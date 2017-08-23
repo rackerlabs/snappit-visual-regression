@@ -8,15 +8,16 @@
   "main": "built/src/index.js",
   "scripts": {
     "prelint": "npm run build",
-    "pretest": "npm run lint && npm run test:setup",
+    "pretest": "npm run lint && npm run test:clean && npm run test:setup",
     "postinstall": "scripts/webdriver-update",
     "build": "tsc",
     "build:watch": "chokidar '**/*.ts' -c 'npm run build'",
-    "clean": "rimraf ./built",
+    "clean": "rm -rf ./built",
     "lint": "tslint {test,src}/*.ts",
     "mockserver": "http-server ./test/public",
     "test": "mocha built/test/*.spec.js",
-    "test:setup": "rm ./test/screenshots/*.png; cp ./test/screenshots/reference/* ./test/screenshots",
+    "test:clean": "rm ./test/screenshots/*.png; rm -rf ./test/screenshots/chrome; true",
+    "test:setup": "cp ./test/screenshots/reference/* ./test/screenshots",
     "webdriver": "scripts/webdriver-update && scripts/webdriver-start"
   },
   "repository": {
@@ -50,7 +51,6 @@
     "inversify": "^4.2.0",
     "mocha": "^3.4.2",
     "reflect-metadata": "^0.1.10",
-    "rimraf": "^2.6.1",
     "tslint": "^5.5.0",
     "typescript": "^2.4.2"
   },

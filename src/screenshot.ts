@@ -2,7 +2,7 @@ import * as fs from "fs-extra";
 import * as path from "path";
 import {PNG} from "pngjs";
 import {
-    By, error as WebDriverError, ThenableWebDriver,
+    By, error as WebDriverError, ISize, ThenableWebDriver,
     WebDriver, WebElement, WebElementPromise,
 } from "selenium-webdriver";
 
@@ -10,25 +10,35 @@ export class Screenshot {
     /**
      * Convert the name and directory of the screenshot into a path.
      */
-    public static buildPath(
+    public static async buildPath(
         name: string,
+        driver: ThenableWebDriver,
         screenshotsDir: string,
-    ): string {
-        const fileName = name.replace(/.png$/, "").replace(/\W+/gi, "-") + ".png";
-        const screenshotPath = path.relative(".", screenshotsDir);
-        return path.join(screenshotPath, fileName);
+    ): Promise<string> {
+        const capabilities = await driver.getCapabilities();
+        const size = await driver.manage().window().getSize();
+        const screenshotPath = path.resolve(screenshotsDir);
+        return path.join(screenshotPath, name)
+            .replace("{browserName}", capabilities.get("browserName"))
+            .replace("{browserVersion}", capabilities.get("version"))
+            .replace("{browserSize}", `${size.width}x${size.height}`)
+            .replace(/.png$/, "")
+            .split(path.sep)
+            .map((value) => value.replace(/\W+/gi, "-"))
+            .join(path.sep) + ".png";
     }
 
     /**
      * Screenshot the entire browser, then crop the image to the element.
      * We use this method because not all drivers implement WebElement.takeScreenshot
      */
-    public static async fromElement(
+    public static async take(
         driver: ThenableWebDriver,
-        element: WebElementPromise,
+        element?: WebElementPromise,
     ): Promise<Screenshot> {
         const buffer = new Buffer(await driver.takeScreenshot(), "base64");
-        return new Screenshot(buffer).cropToElement(element);
+        const screenshot = new Screenshot(buffer);
+        return element ? screenshot.cropToElement(element) : screenshot;
     }
 
     /*
@@ -102,6 +112,8 @@ export class Screenshot {
     public saveToPath(
         filePath: string,
     ): void {
+        const basePath = filePath.slice(0, filePath.lastIndexOf(path.basename(filePath)));
+        fs.mkdirpSync(basePath);
         fs.writeFileSync(filePath, PNG.sync.write(this.png));
     }
 }

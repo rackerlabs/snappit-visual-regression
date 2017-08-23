@@ -3,7 +3,7 @@ import * as childProcess from "child_process";
 import {expect} from "chai";
 import * as fs from "fs-extra";
 import * as _ from "lodash";
-import {By, ThenableWebDriver, WebDriver} from "selenium-webdriver";
+import {By, ISize, ThenableWebDriver, WebDriver} from "selenium-webdriver";
 
 import {IConfig} from "../src/config";
 import {
@@ -13,6 +13,32 @@ import {
     ScreenshotSizeException,
 } from "../src/screenshot";
 import {$, NoDriverSessionException, snap, Snappit} from "../src/snappit";
+
+function sameAsReference(
+    name: string,
+): boolean {
+    const fromPath = `./test/screenshots/${name}`;
+    const toPath = `./test/screenshots/reference/${name}`;
+    const fromSha: Buffer = fs.readFileSync(fromPath);
+    const toSha: Buffer = fs.readFileSync(toPath);
+    return fromSha.compare(toSha) === 0;
+}
+
+async function setViewportSize(
+    driver: ThenableWebDriver,
+    size: ISize,
+): Promise<void> {
+    const jsGetPadding: string = `return {
+        width: window.outerWidth - window.innerWidth,
+        height: window.outerHeight - window.innerHeight
+    }`;
+
+    const padding: ISize = await driver.executeScript(jsGetPadding) as ISize;
+    return driver.manage().window().setSize(
+        size.width + padding.width,
+        size.height + padding.height,
+    );
+}
 
 function browserTest(
     name: string,
@@ -190,6 +216,7 @@ describe("Snappit", () => {
 
             snappit = new Snappit(config);
             driver = snappit.start();
+            await setViewportSize(driver, {width: 960, height: 768}); // Slightly smaller than TravisCI
             await driver.get("http://localhost:8080/");
         });
 
@@ -211,23 +238,43 @@ describe("Snappit", () => {
         it("should throw an error and save if the screenshot is a different size", async () => {
             const error = await snap("different-size.png", $("#color-div")).catch((err) => err);
             expect(error).to.be.an.instanceof(ScreenshotSizeException);
-            expect(fs.statSync("./test/screenshots/different-size.png").size).to.not.eql(1164);
+            expect(sameAsReference("different-size.png")).to.eql(false);
         });
 
         it("should throw an error and save if the screenshot is different above threshold", async () => {
             const error = await snap("different-above-threshold.png", $("#color-div")).catch((err) => err);
             expect(error).to.be.an.instanceof(ScreenshotMismatchException);
-            expect(fs.statSync("./test/screenshots/different-above-threshold.png").size).to.not.eql(1102);
+            expect(sameAsReference("different-above-threshold.png")).to.eql(false);
         });
 
         it("should not throw an error or save if the screenshot is different below threshold", async () => {
             await snap("different-below-threshold.png", $("#color-div"));
-            expect(fs.statSync("./test/screenshots/different-below-threshold.png").size).to.eql(1157);
+            expect(sameAsReference("different-below-threshold.png")).to.eql(true);
         });
 
         it("should not throw an error or save if the screenshot shows no difference", async () => {
             await snap("no-difference.png", $("#color-div"));
-            expect(fs.statSync("./test/screenshots/no-difference.png").size).to.eql(370);
+            expect(sameAsReference("no-difference.png")).to.eql(true);
+        });
+
+        it("should take a screenshot with directory and path tokens", async () => {
+            /**
+             * We need the image to be the same size to validate, but the browser size might change.  This
+             * is a result of the viewport size varying between potential test platforms.  Also the version
+             * of chrome we use to test may regularly change.  This test does somewhat overfit.
+             */
+            const size = await driver.manage().window().getSize();
+            const version = (await driver.getCapabilities()).get("version").replace(/\W+/gi, "-");
+            const path = `./test/screenshots/chrome/${version}/${size.width}x${size.height}/test.png`;
+
+            // This will error because the screenshot does not already exist, but we only care if it's created.
+            await snap("{browserName}/{browserVersion}/{browserSize}/test.png").catch((err) => err);
+            expect(fs.existsSync(path)).to.eql(true);
+        });
+
+        it("should take a fullscreen screenshot that shows no difference", async () => {
+            await snap("fullscreen.png");
+            expect(sameAsReference("fullscreen.png")).to.eql(true);
         });
     });
 });

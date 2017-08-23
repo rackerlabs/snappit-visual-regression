@@ -24,3 +24,4 @@ built/
 
 # Test images
 test/screenshots/*.png
+test/screenshots/chrome
