@@ -1,6 +1,6 @@
 {
   "name": "snappit-visual-regression",
-  "version": "0.0.1",
+  "version": "0.2.0",
   "description": "A visual regression testing library for JavaScript",
   "engines": {
     "node": ">=6.9.x"
@@ -18,6 +18,9 @@
     "test": "mocha built/test/*.spec.js",
     "test:clean": "rm ./test/screenshots/*.png; rm -rf ./test/screenshots/chrome; true",
     "test:setup": "cp ./test/screenshots/reference/* ./test/screenshots",
+    "webdriver": "scripts/webdriver-update && scripts/webdriver-start"
+  },
+  "bin": {
     "webdriver": "scripts/webdriver-update && scripts/webdriver-start"
   },
   "repository": {
