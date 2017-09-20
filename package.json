@@ -20,6 +20,9 @@
     "test:setup": "cp ./test/screenshots/reference/* ./test/screenshots",
     "webdriver": "scripts/webdriver-update && scripts/webdriver-start"
   },
+  "bin": {
+      "webdriver": "scripts/webdriver-update && scripts/webdriver-start"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jj4th/snappit-visual-regression.git"
