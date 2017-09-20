@@ -5,7 +5,8 @@
   "engines": {
     "node": ">=6.9.x"
   },
-  "main": "built/src/index.js",
+  "main": "built/src/index",
+  "typings": "built/src/index",
   "scripts": {
     "prelint": "npm run build",
     "pretest": "npm run lint && npm run test:clean && npm run test:setup",
@@ -18,9 +19,6 @@
     "test": "mocha built/test/*.spec.js",
     "test:clean": "rm ./test/screenshots/*.png; rm -rf ./test/screenshots/chrome; true",
     "test:setup": "cp ./test/screenshots/reference/* ./test/screenshots",
-    "webdriver": "scripts/webdriver-update && scripts/webdriver-start"
-  },
-  "bin": {
     "webdriver": "scripts/webdriver-update && scripts/webdriver-start"
   },
   "repository": {
