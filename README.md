@@ -10,10 +10,7 @@ An NPM module for visual regression testing.
 ```
 cd ~/code/js/snappit-visual-regression
 npm login
-Username: encore-ui
-Password:
-Email: (this IS public) encore-ui@lists.rackspace.com
-Logged in as encore-ui on https://registry.npmjs.org/.
+...
 npm version --minor
 npm publish
 git push origin v${TAG_VERSION}
