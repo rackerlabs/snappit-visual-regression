@@ -16,21 +16,30 @@ import {
 } from "./screenshot";
 
 /**
- * Snappit exposes shortcuts to its public `$` and `snap` methods.  These methods
+ * Snappit exposes shorthand to its public `$` and `snap` methods.  These methods
  * are only valid with a current Snappit session.  We declare their initial state to return
  * a `NoDriverSessionException` and modify them in the `start()` and `stop()` routines.
  */
-export type ISnap = (name: string, element?: WebElementPromise) => Promise<void>;
-const snapPreInit: ISnap = async () => {
-    throw new NoDriverSessionException();
-};
-export let snap: ISnap = snapPreInit;
+let shorthandInstance: Snappit;
 
-export type IFindByCss = (selector: string) => WebElementPromise;
-const $PreInit: IFindByCss = () => {
+export async function snap(
+    name: string,
+    element?: WebElementPromise,
+): Promise<void> {
+    if (shorthandInstance) {
+        return shorthandInstance.snap(name, element);
+    }
     throw new NoDriverSessionException();
-};
-export let $: IFindByCss = $PreInit;
+}
+
+export function $(
+    selector: string,
+): WebElementPromise {
+    if (shorthandInstance) {
+        return shorthandInstance.$(selector);
+    }
+    throw new NoDriverSessionException();
+}
 
 /**
  * Custom errors related to the Snappit class.
@@ -64,16 +73,14 @@ export class Snappit {
         }
 
         // Update the exported shorthand methods
-        $ = this.$.bind(this);
-        snap = this.snap.bind(this);
+        shorthandInstance = this;
 
         return this.driver;
     }
 
     public async stop(): Promise<void> {
         // Update the exported shorthand methods
-        $ = $PreInit;
-        snap = snapPreInit;
+        shorthandInstance = undefined;
 
         try {
             await this.driver.close();
