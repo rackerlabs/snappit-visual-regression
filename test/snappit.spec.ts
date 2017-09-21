@@ -7,12 +7,13 @@ import {By, ISize, ThenableWebDriver, WebDriver} from "selenium-webdriver";
 
 import {IConfig} from "../src/config";
 import {
-    Screenshot,
+    NoDriverSessionException,
+    ScreenshotException,
     ScreenshotMismatchException,
     ScreenshotNotPresentException,
     ScreenshotSizeException,
-} from "../src/screenshot";
-import {$, NoDriverSessionException, snap, Snappit} from "../src/snappit";
+} from "../src/errors";
+import {$, snap, Snappit} from "../src/snappit";
 
 function sameAsReference(
     name: string,

@@ -7,13 +7,14 @@ import {
 } from "selenium-webdriver";
 
 import {IConfig, prepareConfig} from "./config";
-import {getDriver} from "./getDriver";
 import {
-    Screenshot,
+    NoDriverSessionException,
     ScreenshotMismatchException,
     ScreenshotNotPresentException,
     ScreenshotSizeException,
-} from "./screenshot";
+} from "./errors";
+import {getDriver} from "./getDriver";
+import {Screenshot} from "./screenshot";
 
 /**
  * Snappit exposes shorthand to its public `$` and `snap` methods.  These methods
@@ -39,15 +40,6 @@ export function $(
         return shorthandInstance.$(selector);
     }
     throw new NoDriverSessionException();
-}
-
-/**
- * Custom errors related to the Snappit class.
- */
-export class NoDriverSessionException extends Error {
-    constructor(message = "You must call 'new Snappit(config).start();' before invoking this method.") {
-        super(message);
-    }
 }
 
 export class Snappit {
