@@ -121,19 +121,22 @@ export class Screenshot {
 /**
  * Custom errors related to the Snappit class.
  */
-export class ScreenshotMismatchException extends Error {
+export class ScreenshotException extends Error {
+}
+
+export class ScreenshotMismatchException extends ScreenshotException {
     constructor(message = "Screenshots do not match within threshold.") {
         super(message);
     }
 }
 
-export class ScreenshotNotPresentException extends Error {
+export class ScreenshotNotPresentException extends ScreenshotException {
     constructor(message = "No previous screenshot found.") {
         super(message);
     }
 }
 
-export class ScreenshotSizeException extends Error {
+export class ScreenshotSizeException extends ScreenshotException {
     constructor(message = "Screenshots differ with respect to dimension.") {
         super(message);
     }
