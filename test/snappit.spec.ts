@@ -278,4 +278,39 @@ describe("Snappit", () => {
             expect(sameAsReference("fullscreen.png")).to.eql(true);
         });
     });
+
+    describe("when taking a screenshot with throwNoBaseline set to false", function() {
+        let snappit: Snappit;
+        let driver: ThenableWebDriver;
+        this.timeout(15000);
+        this.slow(2500);
+
+        before(async () => {
+            // Reset reference images
+
+            // Initialize Snappit
+            const config: IConfig = {
+                browser: "chrome",
+                screenshotsDir: "test/screenshots",
+                threshold: 0.1,
+                throwNoBaseline: false,
+                useDirect: true,
+            };
+
+            snappit = new Snappit(config);
+            driver = snappit.start();
+            await setViewportSize(driver, {width: 960, height: 768}); // Slightly smaller than TravisCI
+            await driver.get("http://localhost:8080/");
+        });
+
+        after(async () => {
+            await snappit.stop();
+        });
+
+        it("should not throw an error but still save if the screenshot does not exist", async () => {
+            await snap("throw-no-baseline-false.png", $("#color-div"));
+            expect(fs.existsSync("./test/screenshots/throw-no-baseline-false.png")).to.eql(true);
+        });
+
+    });
 });

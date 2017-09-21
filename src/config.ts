@@ -16,6 +16,7 @@ export interface IConfig {
     screenshotsDir?: string;
     serverUrl?: string;
     threshold?: number;
+    throwNoBaseline?: boolean;
     useDirect?: boolean;
     useGeckoDriver?: boolean;
     useProvidedDriver?: boolean;
@@ -34,6 +35,7 @@ const defaultConfig: IConfig = {
     paths: getBinaryPaths(),
     screenshotsDir: "./screenshots",
     threshold: 0.04,
+    throwNoBaseline: true,
     useDirect: false,
     useGeckoDriver: false,
     useProvidedDriver: false,

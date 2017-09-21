@@ -112,7 +112,10 @@ export class Snappit {
         // No baseline image
         } else {
             newShot.saveToPath(filePath);
-            throw new ScreenshotNotPresentException();
+
+            if (this.config.throwNoBaseline) {
+                throw new ScreenshotNotPresentException();
+            }
         }
     }
 }
