@@ -1,8 +1,9 @@
 import * as fs from "fs-extra";
 import * as path from "path";
+
 import {PNG} from "pngjs";
 import {
-    By, error as WebDriverError, ISize, ThenableWebDriver,
+    By, error as WebDriverError, ISize, ILocation, ThenableWebDriver,
     WebDriver, WebElement, WebElementPromise,
 } from "selenium-webdriver";
 
@@ -38,7 +39,8 @@ export class Screenshot {
     ): Promise<Screenshot> {
         const buffer = new Buffer(await driver.takeScreenshot(), "base64");
         const screenshot = new Screenshot(buffer);
-        return element ? screenshot.cropToElement(element) : screenshot;
+        const devicePixelRatio: any = await driver.executeScript("return window.devicePixelRatio");
+        return element ? screenshot.cropToElement(element, devicePixelRatio) : screenshot;
     }
 
     /*
@@ -63,12 +65,15 @@ export class Screenshot {
      */
     public async cropToElement(
         element: WebElementPromise,
+        devicePixelRatio = 1,
     ): Promise<Screenshot> {
         const elemSize = await element.getSize();
         const elemLoc = await element.getLocation();
-
-        const newPng = new PNG(elemSize);
-        PNG.bitblt(this.png, newPng, elemLoc.x, elemLoc.y, elemSize.width, elemSize.height, 0, 0);
+        const dimensions = { width: elemSize.width * devicePixelRatio, height: elemSize.height * devicePixelRatio };
+        const min = { width: Math.min(this.png.width, dimensions.width), height: Math.min(this.png.height, dimensions.height) };
+        const newPng = new PNG(min);
+        const loc = { x: elemLoc.x * devicePixelRatio, y: elemLoc.y * devicePixelRatio };
+        PNG.bitblt(this.png, newPng, loc.x, loc.y, min.width - loc.x, min.height - loc.y, 0, 0);
         return new Screenshot(newPng);
     }
 
