@@ -362,7 +362,7 @@ describe("Snappit", () => {
 
                 // Initialize Snappit
                 const config: IConfig = {
-                    browser: "firefox"
+                    browser: "firefox",
                     screenshotsDir: "test/screenshots",
                     threshold: 0.1,
                     throwNoBaseline: false,
