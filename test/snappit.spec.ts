@@ -313,4 +313,78 @@ describe("Snappit", () => {
         });
 
     });
+
+    describe("cropping oversized elements", function() {
+        describe("in chrome", () => {
+            let snappit: Snappit;
+            let driver: ThenableWebDriver;
+            this.timeout(15000);
+            this.slow(2500);
+
+            before(async () => {
+                // Reset reference images
+
+                // Initialize Snappit
+                const config: IConfig = {
+                    browser: "chrome",
+                    screenshotsDir: "test/screenshots",
+                    threshold: 0.1,
+                    throwNoBaseline: false,
+                    useDirect: true,
+                };
+
+                snappit = new Snappit(config);
+                driver = snappit.start();
+                await setViewportSize(driver, {width: 960, height: 768}); // Slightly smaller than TravisCI
+                await driver.get("http://localhost:8080/");
+            });
+
+            after(async () => {
+                await snappit.stop();
+            });
+
+            it("should crop an oversized element that is larger than the viewport size", async () => {
+                $("#toggle-tall").click();
+                await snap("chrome-throw-no-oversized-crop.png", $("#tall-div"));
+                expect(fs.existsSync("./test/screenshots/chrome-throw-no-oversized-crop.png")).to.eql(true);
+            });
+
+        });
+
+        describe("in firefox", function() {
+            let snappit: Snappit;
+            let driver: ThenableWebDriver;
+            this.timeout(15000);
+            this.slow(2500);
+
+            before(async () => {
+                // Reset reference images
+
+                // Initialize Snappit
+                const config: IConfig = {
+                    browser: "firefox",
+                    screenshotsDir: "test/screenshots",
+                    threshold: 0.1,
+                    throwNoBaseline: false,
+                    useDirect: true,
+                };
+
+                snappit = new Snappit(config);
+                driver = snappit.start();
+                await setViewportSize(driver, {width: 960, height: 768}); // Slightly smaller than TravisCI
+                await driver.get("http://localhost:8080/");
+            });
+
+            after(async () => {
+                await snappit.stop();
+            });
+
+            it("should crop an oversized element that is larger than the viewport size", async () => {
+                $("#toggle-tall").click();
+                await snap("firefox-throw-no-oversized-crop.png", $("#tall-div"));
+                expect(fs.existsSync("./test/screenshots/firefox-throw-no-oversized-crop.png")).to.eql(true);
+            });
+
+        });
+    });
 });

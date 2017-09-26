@@ -1,17 +1,23 @@
 <!DOCTYPE html>
-	<html>
-	<head>
-			<meta charset="utf-8">
-			<meta http-equiv="X-UA-Compatible" content="IE=edge">
-			<title>Test Page</title>
+        <html>
+        <head>
+                        <meta charset="utf-8">
+                        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+                        <title>Test Page</title>
             <style type="text/css">
                 #color-div {
                     width: 300px;
                     height: 100px;
                 }
+
+                #tall-div {
+                    width: 300px;
+                    height: 2000px;
+                    display: none;
+                }
             </style>
-	</head>
-	<body>
+        </head>
+        <body>
         <p>
             Color Div:
             <div style="background-color: blue" id="color-div">
@@ -20,16 +26,33 @@
         <p>
             <button id="toggle-button">Toggle Color</button>
         </p>
-	</body>
+
+        <p>
+            <button id="toggle-tall">Toggle Tall Div</button>
+        </p>
+        <p>
+            <div style="background-color: purple" id="tall-div">
+            </div>
+        </p>
+        </body>
     <script type="text/javascript">
         (() => {
             let colorDiv = document.getElementById('color-div');
             let toggleBtn = document.getElementById('toggle-button');
 
-            toggleBtn.onclick = (e) => {
+            toggleBtn.onclick = () => {
                 let colors = ['blue', 'red', 'yellow', 'green'];
                 let nextColor = colors.indexOf(colorDiv.style.backgroundColor) + 1;
                 colorDiv.style.backgroundColor = colors[nextColor] || colors[0];
+            }
+
+            let tallDiv = document.getElementById('tall-div');
+            let tallBtn = document.getElementById('toggle-tall');
+
+            tallBtn.onclick = () => {
+                let display = tallDiv.style.display;
+                let toggledDisplay = display === 'block' ? 'none' : 'block';
+                tallDiv.style.display = toggledDisplay;
             }
         })();
     </script>
