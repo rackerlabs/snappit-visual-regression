@@ -3,7 +3,7 @@ import * as path from "path";
 
 import {PNG} from "pngjs";
 import {
-    By, error as WebDriverError, ISize, ILocation, ThenableWebDriver,
+    By, error as WebDriverError, ILocation, ISize, ThenableWebDriver,
     WebDriver, WebElement, WebElementPromise,
 } from "selenium-webdriver";
 
@@ -70,7 +70,8 @@ export class Screenshot {
         const elemSize = await element.getSize();
         const elemLoc = await element.getLocation();
         const dimensions = { width: elemSize.width * devicePixelRatio, height: elemSize.height * devicePixelRatio };
-        const min = { width: Math.min(this.png.width, dimensions.width), height: Math.min(this.png.height, dimensions.height) };
+        const min = { height: Math.min(this.png.height, dimensions.height),
+                      width: Math.min(this.png.width, dimensions.width) };
         const newPng = new PNG(min);
         const loc = { x: elemLoc.x * devicePixelRatio, y: elemLoc.y * devicePixelRatio };
         PNG.bitblt(this.png, newPng, loc.x, loc.y, min.width - loc.x, min.height - loc.y, 0, 0);
