@@ -37,7 +37,7 @@ export class Screenshot {
         element?: WebElementPromise,
     ): Promise<Screenshot> {
         // This handles chrome because it doesn't impmlement element.takeScreenshot() yet.
-        const isChrome = await (await driver.getCapabilities()).get("browserName") == "chrome";
+        const isChrome = (await driver.getCapabilities()).get("browserName") === "chrome";
         if (element && isChrome) {
             return this.chromeCanvasScreenshot(driver, element);
         }
@@ -54,25 +54,15 @@ export class Screenshot {
      */
     public static async chromeCanvasScreenshot(
         driver: ThenableWebDriver,
-        element: WebElementPromise
+        element: WebElementPromise,
     ): Promise<Screenshot> {
-        const fn = `
-            function inlineStyles(elem, origElem) {
-                var children = elem.querySelectorAll('*');
-                var origChildren = origElem.querySelectorAll('*');
-                elem.style.cssText = getComputedStyle(origElem).cssText;
-
-                Array.prototype.forEach.call(children, function (child, i) {
-                    child.style.cssText = getComputedStyle(origChildren[i]).cssText;
-                });
-                elem.style.margin = elem.style.marginLeft = elem.style.marginTop = elem.style.marginBottom = elem.style.marginRight = '';
-            }
-
-            let origElem = arguments[0];
-			let elem = origElem.cloneNode(true);
-            inlineStyles(elem, origElem);
-        `;
-        const buffer = new Buffer((await driver.executeAsyncScript(fn, element)) as string, "base64");
+        await driver.manage().timeouts().setScriptTimeout(5000);
+        await driver.executeScript(fs.readFileSync(require.resolve("dom-to-image")).toString());
+        const pngString = await driver.executeAsyncScript(`
+            callback = arguments[arguments.length - 1];
+            domtoimage.toPng(arguments[0]).then(callback);
+            `, element) as string;
+        const buffer = new Buffer(pngString.slice("data:image/png;base64,".length), "base64");
         const screenshot = new Screenshot(buffer);
         return screenshot;
     }
