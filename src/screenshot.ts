@@ -1,7 +1,7 @@
 import * as fs from "fs-extra";
 import * as path from "path";
 
-import {PNG} from "pngjs";
+import { PNG } from "pngjs";
 import {
     By, error as WebDriverError, ILocation, ISize, ThenableWebDriver,
     WebDriver, WebElement, WebElementPromise,
@@ -30,17 +30,51 @@ export class Screenshot {
     }
 
     /**
-     * Screenshot the entire browser, then crop the image to the element.
-     * We use this method because not all drivers implement WebElement.takeScreenshot
+     * Screenshot the browser or element.
      */
     public static async take(
         driver: ThenableWebDriver,
         element?: WebElementPromise,
     ): Promise<Screenshot> {
-        const buffer = new Buffer(await driver.takeScreenshot(), "base64");
+        // This handles chrome because it doesn't impmlement element.takeScreenshot() yet.
+        const isChrome = await (await driver.getCapabilities()).get("browserName") == "chrome";
+        if (element && isChrome) {
+            return this.chromeCanvasScreenshot(driver, element);
+        }
+
+        const buffer = new Buffer(await (element ? element : driver).takeScreenshot(), "base64");
         const screenshot = new Screenshot(buffer);
-        const devicePixelRatio: any = await driver.executeScript("return window.devicePixelRatio");
-        return element ? screenshot.cropToElement(element, devicePixelRatio) : screenshot;
+        return screenshot;
+    }
+
+    /**
+     * Generate a screenshot via chrome canvas.
+     * This is a workaround to screenshotting an element in chrome because chromedriver does not
+     * implement WebElement.takeScreenshot
+     */
+    public static async chromeCanvasScreenshot(
+        driver: ThenableWebDriver,
+        element: WebElementPromise
+    ): Promise<Screenshot> {
+        const fn = `
+            function inlineStyles(elem, origElem) {
+                var children = elem.querySelectorAll('*');
+                var origChildren = origElem.querySelectorAll('*');
+                elem.style.cssText = getComputedStyle(origElem).cssText;
+
+                Array.prototype.forEach.call(children, function (child, i) {
+                    child.style.cssText = getComputedStyle(origChildren[i]).cssText;
+                });
+                elem.style.margin = elem.style.marginLeft = elem.style.marginTop = elem.style.marginBottom = elem.style.marginRight = '';
+            }
+
+            let origElem = arguments[0];
+			let elem = origElem.cloneNode(true);
+            inlineStyles(elem, origElem);
+        `;
+        const buffer = new Buffer((await driver.executeAsyncScript(fn, element)) as string, "base64");
+        const screenshot = new Screenshot(buffer);
+        return screenshot;
     }
 
     /*
@@ -58,24 +92,6 @@ export class Screenshot {
         source: Buffer | PNG,
     ) {
         this.png = source instanceof Buffer ? PNG.sync.read(source) : source;
-    }
-
-    /**
-     * Crop the screenshot to the size of a webdriver element.
-     */
-    public async cropToElement(
-        element: WebElementPromise,
-        devicePixelRatio = 1,
-    ): Promise<Screenshot> {
-        const elemSize = await element.getSize();
-        const elemLoc = await element.getLocation();
-        const dimensions = { width: elemSize.width * devicePixelRatio, height: elemSize.height * devicePixelRatio };
-        const min = { height: Math.min(this.png.height, dimensions.height),
-                      width: Math.min(this.png.width, dimensions.width) };
-        const newPng = new PNG(min);
-        const loc = { x: elemLoc.x * devicePixelRatio, y: elemLoc.y * devicePixelRatio };
-        PNG.bitblt(this.png, newPng, loc.x, loc.y, min.width - loc.x, min.height - loc.y, 0, 0);
-        return new Screenshot(newPng);
     }
 
     /**
@@ -103,7 +119,7 @@ export class Screenshot {
             return 1;
         }
 
-        for (let x =  0; x < bufferLength; x++) {
+        for (let x = 0; x < bufferLength; x++) {
             if (this.png.data[x] !== diffShot.png.data[x]) {
                 pixelDiff++;
             }
