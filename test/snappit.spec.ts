@@ -315,7 +315,7 @@ describe("Snappit", () => {
     });
 
     describe("cropping oversized elements", function() {
-        describe.only("in chrome", () => {
+        describe("in chrome", () => {
             let snappit: Snappit;
             let driver: ThenableWebDriver;
             this.timeout(15000);
