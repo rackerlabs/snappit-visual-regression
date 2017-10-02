@@ -12,7 +12,6 @@ export interface IConfigPaths {
 
 export interface IConfig {
     browser?: string;
-    includeDevicePixelRatio?: boolean;
     paths?: IConfigPaths;
     screenshotsDir?: string;
     serverUrl?: string;
@@ -33,7 +32,6 @@ export function prepareConfig(config: IConfig): IConfig {
 
 const defaultConfig: IConfig = {
     browser: "chrome",
-    includeDevicePixelRatio: false,
     paths: getBinaryPaths(),
     screenshotsDir: "./screenshots",
     threshold: 0.04,
