@@ -267,10 +267,9 @@ describe("Snappit", () => {
         });
 
         it("should handle an oversized element that is larger than the viewport size", async () => {
-            $("#toggle-tall").click();
-            await snap("chrome-throw-no-oversized-crop.png", $("#tall-div")).catch((err) => err);
+            await snap("chrome-throw-no-oversized-crop.png", $("#color-div")).catch((err) => err);
             await setViewportSize(driver, {width: 100, height: 100});
-            await snap("chrome-throw-no-oversized-crop.png", $("#tall-div"));
+            await snap("chrome-throw-no-oversized-crop.png", $("#color-div"));
         });
     });
 
