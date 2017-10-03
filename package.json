@@ -17,7 +17,7 @@
     "lint": "tslint {test,src}/*.ts",
     "mockserver": "http-server ./test/public",
     "test": "mocha built/test/*.spec.js",
-    "test:clean": "rm ./test/screenshots/*.png; rm -rf ./test/screenshots/chrome; true",
+    "test:clean": "rm -rf ./test/screenshots",
     "webdriver": "scripts/webdriver-update && scripts/webdriver-start"
   },
   "repository": {

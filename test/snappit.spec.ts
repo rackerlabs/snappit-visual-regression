@@ -15,16 +15,6 @@ import {
 } from "../src/errors";
 import {$, snap, Snappit} from "../src/snappit";
 
-function sameAsReference(
-    name: string,
-): boolean {
-    const fromPath = `./test/screenshots/${name}`;
-    const toPath = `./test/screenshots/reference/${name}`;
-    const fromSha: Buffer = fs.readFileSync(fromPath);
-    const toSha: Buffer = fs.readFileSync(toPath);
-    return fromSha.compare(toSha) === 0;
-}
-
 async function setViewportSize(
     driver: ThenableWebDriver,
     size: ISize,
@@ -148,8 +138,6 @@ describe("Snappit", () => {
         this.slow(2500);
 
         before(() => {
-            // Reset reference images
-
             // Initialize Snappit
             const config: IConfig = {
                 browser: "chrome",
@@ -205,8 +193,6 @@ describe("Snappit", () => {
         this.slow(2500);
 
         before(async () => {
-            // Reset reference images
-
             // Initialize Snappit
             const config: IConfig = {
                 browser: "chrome",
@@ -237,25 +223,32 @@ describe("Snappit", () => {
         });
 
         it("should throw an error and save if the screenshot is a different size", async () => {
+            // ignore pre-populating of baseline
+            await snap("different-size.png", $("body")).catch((err) => err);
             const error = await snap("different-size.png", $("#color-div")).catch((err) => err);
             expect(error).to.be.an.instanceof(ScreenshotSizeException);
-            expect(sameAsReference("different-size.png")).to.eql(false);
         });
 
         it("should throw an error and save if the screenshot is different above threshold", async () => {
+            // ignore pre-populating of baseline
+            await snap("different-above-threshold.png", $("#color-div")).catch((err) => err);
+            $("#toggle-button").click();
             const error = await snap("different-above-threshold.png", $("#color-div")).catch((err) => err);
             expect(error).to.be.an.instanceof(ScreenshotMismatchException);
-            expect(sameAsReference("different-above-threshold.png")).to.eql(false);
         });
 
         it("should not throw an error or save if the screenshot is different below threshold", async () => {
+            // ignore pre-populating of baseline
+            await snap("different-below-threshold.png", $("#color-div")).catch((err) => err);
+            $("#border-button").click();
             await snap("different-below-threshold.png", $("#color-div"));
-            expect(sameAsReference("different-below-threshold.png")).to.eql(true);
         });
 
         it("should not throw an error or save if the screenshot shows no difference", async () => {
+            $("#border-button").click();
+            // ignore pre-populating of baseline
+            await snap("no-difference.png", $("#color-div")).catch((err) => err);
             await snap("no-difference.png", $("#color-div"));
-            expect(sameAsReference("no-difference.png")).to.eql(true);
         });
 
         it("should take a screenshot with directory and path tokens", async () => {
@@ -273,10 +266,6 @@ describe("Snappit", () => {
             expect(fs.existsSync(path)).to.eql(true);
         });
 
-        it("should take a fullscreen screenshot that shows no difference", async () => {
-            await snap("fullscreen.png");
-            expect(sameAsReference("fullscreen.png")).to.eql(true);
-        });
     });
 
     describe("when taking a screenshot with throwNoBaseline set to false", function() {

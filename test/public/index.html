@@ -8,6 +8,7 @@
                 #color-div {
                     width: 300px;
                     height: 100px;
+                    border: 4px solid blue;
                 }
 
                 #tall-div {
@@ -25,6 +26,7 @@
         </p>
         <p>
             <button id="toggle-button">Toggle Color</button>
+            <button id="border-button">Toggle Border</button>
         </p>
 
         <p>
@@ -39,11 +41,17 @@
         (() => {
             let colorDiv = document.getElementById('color-div');
             let toggleBtn = document.getElementById('toggle-button');
+            let borderBtn = document.getElementById('border-button');
 
             toggleBtn.onclick = () => {
                 let colors = ['blue', 'red', 'yellow', 'green'];
                 let nextColor = colors.indexOf(colorDiv.style.backgroundColor) + 1;
                 colorDiv.style.backgroundColor = colors[nextColor] || colors[0];
+            }
+
+            borderBtn.onclick = () => {
+                let border = colorDiv.style.border.length ? '' : '4px solid black';
+                colorDiv.style.border = border;
             }
 
             let tallDiv = document.getElementById('tall-div');
