@@ -3,7 +3,7 @@ import * as path from "path";
 
 import { PNG } from "pngjs";
 import {
-    By, error as WebDriverError, ILocation, ISize, ThenableWebDriver,
+    By, error as WebDriverError, ISize, ThenableWebDriver,
     WebDriver, WebElement, WebElementPromise,
 } from "selenium-webdriver";
 
