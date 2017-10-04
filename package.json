@@ -46,7 +46,7 @@
     "chokidar-cli": "^1.2.0",
     "http-server": "^0.10.0",
     "inversify": "^4.2.0",
-    "mocha": "^3.4.2",
+    "mocha": "^4.0.0",
     "reflect-metadata": "^0.1.10",
     "tslint": "^5.5.0",
     "typescript": "^2.4.2"
