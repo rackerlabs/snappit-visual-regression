@@ -7,22 +7,13 @@ import {By, ISize, ThenableWebDriver, WebDriver} from "selenium-webdriver";
 
 import {IConfig} from "../src/config";
 import {
-    Screenshot,
+    NoDriverSessionException,
+    ScreenshotException,
     ScreenshotMismatchException,
     ScreenshotNotPresentException,
     ScreenshotSizeException,
-} from "../src/screenshot";
-import {$, NoDriverSessionException, snap, Snappit} from "../src/snappit";
-
-function sameAsReference(
-    name: string,
-): boolean {
-    const fromPath = `./test/screenshots/${name}`;
-    const toPath = `./test/screenshots/reference/${name}`;
-    const fromSha: Buffer = fs.readFileSync(fromPath);
-    const toSha: Buffer = fs.readFileSync(toPath);
-    return fromSha.compare(toSha) === 0;
-}
+} from "../src/errors";
+import {$, snap, Snappit} from "../src/snappit";
 
 async function setViewportSize(
     driver: ThenableWebDriver,
@@ -147,8 +138,6 @@ describe("Snappit", () => {
         this.slow(2500);
 
         before(() => {
-            // Reset reference images
-
             // Initialize Snappit
             const config: IConfig = {
                 browser: "chrome",
@@ -204,8 +193,6 @@ describe("Snappit", () => {
         this.slow(2500);
 
         before(async () => {
-            // Reset reference images
-
             // Initialize Snappit
             const config: IConfig = {
                 browser: "chrome",
@@ -236,25 +223,32 @@ describe("Snappit", () => {
         });
 
         it("should throw an error and save if the screenshot is a different size", async () => {
+            // ignore pre-populating of baseline
+            await snap("different-size.png", $("body")).catch((err) => err);
             const error = await snap("different-size.png", $("#color-div")).catch((err) => err);
             expect(error).to.be.an.instanceof(ScreenshotSizeException);
-            expect(sameAsReference("different-size.png")).to.eql(false);
         });
 
         it("should throw an error and save if the screenshot is different above threshold", async () => {
+            // ignore pre-populating of baseline
+            await snap("different-above-threshold.png", $("#color-div")).catch((err) => err);
+            $("#toggle-button").click();
             const error = await snap("different-above-threshold.png", $("#color-div")).catch((err) => err);
             expect(error).to.be.an.instanceof(ScreenshotMismatchException);
-            expect(sameAsReference("different-above-threshold.png")).to.eql(false);
         });
 
         it("should not throw an error or save if the screenshot is different below threshold", async () => {
+            // ignore pre-populating of baseline
+            await snap("different-below-threshold.png", $("#color-div")).catch((err) => err);
+            $("#border-button").click();
             await snap("different-below-threshold.png", $("#color-div"));
-            expect(sameAsReference("different-below-threshold.png")).to.eql(true);
         });
 
         it("should not throw an error or save if the screenshot shows no difference", async () => {
+            $("#border-button").click();
+            // ignore pre-populating of baseline
+            await snap("no-difference.png", $("#color-div")).catch((err) => err);
             await snap("no-difference.png", $("#color-div"));
-            expect(sameAsReference("no-difference.png")).to.eql(true);
         });
 
         it("should take a screenshot with directory and path tokens", async () => {
@@ -272,9 +266,45 @@ describe("Snappit", () => {
             expect(fs.existsSync(path)).to.eql(true);
         });
 
-        it("should take a fullscreen screenshot that shows no difference", async () => {
-            await snap("fullscreen.png");
-            expect(sameAsReference("fullscreen.png")).to.eql(true);
+        it("should handle an oversized element that is larger than the viewport size", async () => {
+            await snap("chrome-throw-no-oversized-crop.png", $("#color-div")).catch((err) => err);
+            await setViewportSize(driver, {width: 100, height: 100});
+            await snap("chrome-throw-no-oversized-crop.png", $("#color-div"));
         });
+    });
+
+    describe("when taking a screenshot with throwNoBaseline set to false", function() {
+        let snappit: Snappit;
+        let driver: ThenableWebDriver;
+        this.timeout(15000);
+        this.slow(2500);
+
+        before(async () => {
+            // Reset reference images
+
+            // Initialize Snappit
+            const config: IConfig = {
+                browser: "chrome",
+                screenshotsDir: "test/screenshots",
+                threshold: 0.1,
+                throwNoBaseline: false,
+                useDirect: true,
+            };
+
+            snappit = new Snappit(config);
+            driver = snappit.start();
+            await setViewportSize(driver, {width: 960, height: 768}); // Slightly smaller than TravisCI
+            await driver.get("http://localhost:8080/");
+        });
+
+        after(async () => {
+            await snappit.stop();
+        });
+
+        it("should not throw an error but still save if the screenshot does not exist", async () => {
+            await snap("throw-no-baseline-false.png", $("#color-div"));
+            expect(fs.existsSync("./test/screenshots/throw-no-baseline-false.png")).to.eql(true);
+        });
+
     });
 });

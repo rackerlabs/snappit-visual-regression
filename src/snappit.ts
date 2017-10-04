@@ -7,38 +7,39 @@ import {
 } from "selenium-webdriver";
 
 import {IConfig, prepareConfig} from "./config";
-import {getDriver} from "./getDriver";
 import {
-    Screenshot,
+    NoDriverSessionException,
     ScreenshotMismatchException,
     ScreenshotNotPresentException,
     ScreenshotSizeException,
-} from "./screenshot";
+} from "./errors";
+import {getDriver} from "./getDriver";
+import {Screenshot} from "./screenshot";
 
 /**
- * Snappit exposes shortcuts to its public `$` and `snap` methods.  These methods
+ * Snappit exposes shorthand to its public `$` and `snap` methods.  These methods
  * are only valid with a current Snappit session.  We declare their initial state to return
  * a `NoDriverSessionException` and modify them in the `start()` and `stop()` routines.
  */
-export type ISnap = (name: string, element?: WebElementPromise) => Promise<void>;
-const snapPreInit: ISnap = async () => {
-    throw new NoDriverSessionException();
-};
-export let snap: ISnap = snapPreInit;
+let shorthandInstance: Snappit;
 
-export type IFindByCss = (selector: string) => WebElementPromise;
-const $PreInit: IFindByCss = () => {
-    throw new NoDriverSessionException();
-};
-export let $: IFindByCss = $PreInit;
-
-/**
- * Custom errors related to the Snappit class.
- */
-export class NoDriverSessionException extends Error {
-    constructor(message = "You must call 'new Snappit(config).start();' before invoking this method.") {
-        super(message);
+export async function snap(
+    name: string,
+    element?: WebElementPromise,
+): Promise<void> {
+    if (shorthandInstance) {
+        return shorthandInstance.snap(name, element);
     }
+    throw new NoDriverSessionException();
+}
+
+export function $(
+    selector: string,
+): WebElementPromise {
+    if (shorthandInstance) {
+        return shorthandInstance.$(selector);
+    }
+    throw new NoDriverSessionException();
 }
 
 export class Snappit {
@@ -64,16 +65,14 @@ export class Snappit {
         }
 
         // Update the exported shorthand methods
-        $ = this.$.bind(this);
-        snap = this.snap.bind(this);
+        shorthandInstance = this;
 
         return this.driver;
     }
 
     public async stop(): Promise<void> {
         // Update the exported shorthand methods
-        $ = $PreInit;
-        snap = snapPreInit;
+        shorthandInstance = undefined;
 
         try {
             await this.driver.close();
@@ -105,15 +104,21 @@ export class Snappit {
                 throw new ScreenshotSizeException();
             }
 
-            if (newShot.percentDiff(oldShot) > this.config.threshold) {
+            const diff = newShot.percentDiff(oldShot);
+            if (diff > this.config.threshold) {
+                const prettyDiff = (diff * 100).toFixed(2) + "%";
+                const message = `Screenshots do not match within threshold. ${prettyDiff} difference.`;
                 newShot.saveToPath(filePath);
-                throw new ScreenshotMismatchException();
+                throw new ScreenshotMismatchException(message);
             }
 
         // No baseline image
         } else {
             newShot.saveToPath(filePath);
-            throw new ScreenshotNotPresentException();
+
+            if (this.config.throwNoBaseline) {
+                throw new ScreenshotNotPresentException();
+            }
         }
     }
 }

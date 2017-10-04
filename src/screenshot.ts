@@ -1,6 +1,7 @@
 import * as fs from "fs-extra";
 import * as path from "path";
-import {PNG} from "pngjs";
+
+import { PNG } from "pngjs";
 import {
     By, error as WebDriverError, ISize, ThenableWebDriver,
     WebDriver, WebElement, WebElementPromise,
@@ -29,16 +30,41 @@ export class Screenshot {
     }
 
     /**
-     * Screenshot the entire browser, then crop the image to the element.
-     * We use this method because not all drivers implement WebElement.takeScreenshot
+     * Screenshot the browser or element.
      */
     public static async take(
         driver: ThenableWebDriver,
         element?: WebElementPromise,
     ): Promise<Screenshot> {
-        const buffer = new Buffer(await driver.takeScreenshot(), "base64");
+        // This handles chrome because it doesn't impmlement element.takeScreenshot() yet.
+        const isChrome = (await driver.getCapabilities()).get("browserName") === "chrome";
+        if (element && isChrome) {
+            return this.chromeCanvasScreenshot(driver, element);
+        }
+
+        const buffer = new Buffer(await (element ? element : driver).takeScreenshot(), "base64");
         const screenshot = new Screenshot(buffer);
-        return element ? screenshot.cropToElement(element) : screenshot;
+        return screenshot;
+    }
+
+    /**
+     * Generate a screenshot via chrome canvas.
+     * This is a workaround to screenshotting an element in chrome because chromedriver does not
+     * implement WebElement.takeScreenshot
+     */
+    public static async chromeCanvasScreenshot(
+        driver: ThenableWebDriver,
+        element: WebElementPromise,
+    ): Promise<Screenshot> {
+        await driver.manage().timeouts().setScriptTimeout(5000);
+        await driver.executeScript(fs.readFileSync(require.resolve("dom-to-image")).toString());
+        const pngString = await driver.executeAsyncScript(`
+            callback = arguments[arguments.length - 1];
+            domtoimage.toPng(arguments[0]).then(callback);
+            `, element) as string;
+        const buffer = new Buffer(pngString.slice("data:image/png;base64,".length), "base64");
+        const screenshot = new Screenshot(buffer);
+        return screenshot;
     }
 
     /*
@@ -56,20 +82,6 @@ export class Screenshot {
         source: Buffer | PNG,
     ) {
         this.png = source instanceof Buffer ? PNG.sync.read(source) : source;
-    }
-
-    /**
-     * Crop the screenshot to the size of a webdriver element.
-     */
-    public async cropToElement(
-        element: WebElementPromise,
-    ): Promise<Screenshot> {
-        const elemSize = await element.getSize();
-        const elemLoc = await element.getLocation();
-
-        const newPng = new PNG(elemSize);
-        PNG.bitblt(this.png, newPng, elemLoc.x, elemLoc.y, elemSize.width, elemSize.height, 0, 0);
-        return new Screenshot(newPng);
     }
 
     /**
@@ -97,7 +109,7 @@ export class Screenshot {
             return 1;
         }
 
-        for (let x =  0; x < bufferLength; x++) {
+        for (let x = 0; x < bufferLength; x++) {
             if (this.png.data[x] !== diffShot.png.data[x]) {
                 pixelDiff++;
             }
@@ -115,26 +127,5 @@ export class Screenshot {
         const basePath = filePath.slice(0, filePath.lastIndexOf(path.basename(filePath)));
         fs.mkdirpSync(basePath);
         fs.writeFileSync(filePath, PNG.sync.write(this.png));
-    }
-}
-
-/**
- * Custom errors related to the Snappit class.
- */
-export class ScreenshotMismatchException extends Error {
-    constructor(message = "Screenshots do not match within threshold.") {
-        super(message);
-    }
-}
-
-export class ScreenshotNotPresentException extends Error {
-    constructor(message = "No previous screenshot found.") {
-        super(message);
-    }
-}
-
-export class ScreenshotSizeException extends Error {
-    constructor(message = "Screenshots differ with respect to dimension.") {
-        super(message);
     }
 }
