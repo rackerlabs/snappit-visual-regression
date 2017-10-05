@@ -10,7 +10,7 @@ export interface IBrowserConfigPaths {
     seleniumPath: string;
 }
 
-export interface IBrowserConfig {
+export interface IConfig extends ISnappitConfig {
     browser?: string;
     paths?: IBrowserConfigPaths;
     serverUrl?: string;
@@ -25,9 +25,9 @@ export interface ISnappitConfig {
     throwNoBaseline?: boolean;
 }
 
-export function prepareBrowserConfig(config: IBrowserConfig): IBrowserConfig {
+export function prepareBrowserConfig(config: IConfig): IConfig {
     /* tslint:disable-next-line:prefer-const */
-    let prepared: IBrowserConfig = _.cloneDeep(config);
+    let prepared: IConfig = _.cloneDeep(config);
     _.defaults(prepared, defaultBrowserConfig); // Mutates prepared
     validateBrowserConfig(prepared);
     return prepared;
@@ -41,7 +41,7 @@ export function prepareSnappitConfig(config: ISnappitConfig): ISnappitConfig {
     return prepared;
 }
 
-const defaultBrowserConfig: IBrowserConfig = {
+const defaultBrowserConfig: IConfig = {
     browser: "chrome",
     paths: getBinaryPaths(),
     useDirect: false,
@@ -68,7 +68,7 @@ function getBinaryPaths(): IBrowserConfigPaths {
 }
 
 export function validateBrowserConfig(
-    config: IBrowserConfig,
+    config: IConfig,
 ): void {
     const validBrowsers = [Webdriver.Browser.CHROME, Webdriver.Browser.FIREFOX];
 

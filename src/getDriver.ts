@@ -4,7 +4,7 @@ import * as Chrome from "selenium-webdriver/chrome";
 import * as Firefox from "selenium-webdriver/firefox";
 import * as remote from "selenium-webdriver/remote";
 
-import {IBrowserConfig} from "./config";
+import {IConfig} from "./config";
 
 // Type aliaases for convenience
 type Promise<T> = Webdriver.promise.Promise<T>;
@@ -78,7 +78,7 @@ function getRemoteDriver(
 }
 
 export function getDriver(
-    config: IBrowserConfig,
+    config: IConfig,
 ): Webdriver.ThenableWebDriver {
 
     let browser: IBrowserDriver;

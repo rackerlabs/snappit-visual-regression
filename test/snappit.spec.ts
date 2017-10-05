@@ -5,7 +5,7 @@ import * as fs from "fs-extra";
 import * as _ from "lodash";
 import {By, ISize, ThenableWebDriver, WebDriver} from "selenium-webdriver";
 
-import {IBrowserConfig, ISnappitConfig} from "../src/config";
+import {IConfig, ISnappitConfig} from "../src/config";
 
 import {
     NoDriverSessionException,
@@ -34,7 +34,7 @@ async function setViewportSize(
 
 function browserTest(
     name: string,
-    config: IBrowserConfig,
+    config: IConfig,
     driver?: ThenableWebDriver,
     skip?: boolean,
 ): void {
@@ -77,7 +77,7 @@ function browserTest(
 namespace browserTest {
     export function skip(
         name: string,
-        config: IBrowserConfig,
+        config: IConfig,
         driver?: ThenableWebDriver,
     ): void {
         browserTest(name, config, driver, true);
@@ -140,7 +140,7 @@ describe("Snappit", () => {
 
         before(() => {
             // Initialize Snappit
-            const config: IBrowserConfig = {
+            const config: IConfig = {
                 browser: "chrome",
                 useDirect: true,
             };
@@ -183,7 +183,7 @@ describe("Snappit", () => {
         return null;
     });
 
-    describe.only("when taking a screenshot", function() {
+    describe("when taking a screenshot", function() {
         let snappit: Snappit;
         let driver: ThenableWebDriver;
         this.timeout(15000);
@@ -191,17 +191,15 @@ describe("Snappit", () => {
 
         before(async () => {
             // Initialize Snappit
-            const config: IBrowserConfig = {
+            const config: IConfig = {
                 browser: "chrome",
+                screenshotsDir: "test/screenshots",
+                threshold: 0.1,
                 useDirect: true,
             };
 
             snappit = new Snappit(config);
             driver = snappit.start();
-            snap.configure({
-                screenshotsDir: "test/screenshots",
-                threshold: 0.1,
-            });
 
             await setViewportSize(driver, {width: 960, height: 768}); // Slightly smaller than TravisCI
             await driver.get("http://localhost:8080/");
@@ -296,18 +294,16 @@ describe("Snappit", () => {
         this.slow(2500);
 
         before(async () => {
-            const config: IBrowserConfig = {
+            const config: IConfig = {
                 browser: "chrome",
+                screenshotsDir: "test/screenshots",
+                threshold: 0.1,
+                throwNoBaseline: false,
                 useDirect: true,
             };
 
             snappit = new Snappit(config);
             driver = snappit.start();
-            snap.configure({
-                screenshotsDir: "test/screenshots",
-                threshold: 0.1,
-                throwNoBaseline: false,
-            });
 
             await setViewportSize(driver, {width: 960, height: 768}); // Slightly smaller than TravisCI
             await driver.get("http://localhost:8080/");

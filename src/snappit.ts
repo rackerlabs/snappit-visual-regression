@@ -8,7 +8,7 @@ import {
 } from "selenium-webdriver";
 
 import {
-    IBrowserConfig,
+    IConfig,
     ISnappitConfig,
     prepareBrowserConfig,
     prepareSnappitConfig,
@@ -67,12 +67,12 @@ export function $(
 }
 
 export class Snappit {
-    private browserConfig: IBrowserConfig;
+    private browserConfig: IConfig;
     private snappitConfig: ISnappitConfig;
     private driver: ThenableWebDriver;
 
     constructor(
-        config: IBrowserConfig,
+        config: IConfig,
         driver?: ThenableWebDriver,
     ) {
         if (driver instanceof WebDriver) {
@@ -80,7 +80,7 @@ export class Snappit {
         }
 
         this.browserConfig = prepareBrowserConfig(config);
-        this.snappitConfig = prepareSnappitConfig({});
+        this.snappitConfig = prepareSnappitConfig(config as ISnappitConfig);
         // Update the global selector function
     }
 
