@@ -5,7 +5,8 @@ import * as fs from "fs-extra";
 import * as _ from "lodash";
 import {By, ISize, ThenableWebDriver, WebDriver} from "selenium-webdriver";
 
-import {IConfig} from "../src/config";
+import {IBrowserConfig, ISnappitConfig} from "../src/config";
+
 import {
     NoDriverSessionException,
     ScreenshotException,
@@ -33,7 +34,7 @@ async function setViewportSize(
 
 function browserTest(
     name: string,
-    config: IConfig,
+    config: IBrowserConfig,
     driver?: ThenableWebDriver,
     skip?: boolean,
 ): void {
@@ -76,7 +77,7 @@ function browserTest(
 namespace browserTest {
     export function skip(
         name: string,
-        config: IConfig,
+        config: IBrowserConfig,
         driver?: ThenableWebDriver,
     ): void {
         browserTest(name, config, driver, true);
@@ -139,10 +140,8 @@ describe("Snappit", () => {
 
         before(() => {
             // Initialize Snappit
-            const config: IConfig = {
+            const config: IBrowserConfig = {
                 browser: "chrome",
-                screenshotsDir: "test/screenshots",
-                threshold: 0.1,
                 useDirect: true,
             };
 
@@ -156,9 +155,8 @@ describe("Snappit", () => {
             });
 
             it("should throw an error on invoking 'snap'", async () => {
-                const fn = snap as () => Promise<void>;
-                const error = await fn().catch((err) => err);
-                expect (error).to.be.an.instanceOf(NoDriverSessionException);
+                const error = await snap("foo").catch((err: NoDriverSessionException) => err);
+                expect(error).to.be.an.instanceOf(NoDriverSessionException);
             });
         });
 
@@ -175,9 +173,8 @@ describe("Snappit", () => {
             });
 
             it("should throw an error on invoking 'snap'", async () => {
-                const fn = snap as () => Promise<void>;
-                const error = await fn().catch((err) => err);
-                expect (error).to.be.an.instanceOf(NoDriverSessionException);
+                const error = await snap("foo").catch((err: NoDriverSessionException) => err);
+                expect(error).to.be.an.instanceOf(NoDriverSessionException);
             });
         });
     });
@@ -186,7 +183,7 @@ describe("Snappit", () => {
         return null;
     });
 
-    describe("when taking a screenshot", function() {
+    describe.only("when taking a screenshot", function() {
         let snappit: Snappit;
         let driver: ThenableWebDriver;
         this.timeout(15000);
@@ -194,15 +191,18 @@ describe("Snappit", () => {
 
         before(async () => {
             // Initialize Snappit
-            const config: IConfig = {
+            const config: IBrowserConfig = {
                 browser: "chrome",
-                screenshotsDir: "test/screenshots",
-                threshold: 0.1,
                 useDirect: true,
             };
 
             snappit = new Snappit(config);
             driver = snappit.start();
+            snap.configure({
+                screenshotsDir: "test/screenshots",
+                threshold: 0.1,
+            });
+
             await setViewportSize(driver, {width: 960, height: 768}); // Slightly smaller than TravisCI
             await driver.get("http://localhost:8080/");
         });
@@ -211,11 +211,14 @@ describe("Snappit", () => {
             await snappit.stop();
         });
 
-        /**
-         * For the tests below, we use the size of the existing reference PNG to determine if a new PNG has been
-         * saved.  If this proves unreliable, we could also take the screenshot a second time and assume that
-         * it will not error.
-         */
+        it("should reject invalid thresholds", () => {
+            try {
+                snap.configure({ threshold: 1.01 });
+            } catch (e) {
+                expect(e.message).to.equal('Configuration error:  Please set a "threshold" between 0 and 0.99');
+            }
+        });
+
         it("should throw an error and save if the screenshot does not exist", async () => {
             const error = await snap("does-not-exist.png", $("#color-div")).catch((err) => err);
             expect(error).to.be.an.instanceof(ScreenshotNotPresentException);
@@ -252,11 +255,6 @@ describe("Snappit", () => {
         });
 
         it("should take a screenshot with directory and path tokens", async () => {
-            /**
-             * We need the image to be the same size to validate, but the browser size might change.  This
-             * is a result of the viewport size varying between potential test platforms.  Also the version
-             * of chrome we use to test may regularly change.  This test does somewhat overfit.
-             */
             const size = await driver.manage().window().getSize();
             const version = (await driver.getCapabilities()).get("version").replace(/\W+/gi, "-");
             const path = `./test/screenshots/chrome/${version}/${size.width}x${size.height}/test.png`;
@@ -268,8 +266,26 @@ describe("Snappit", () => {
 
         it("should handle an oversized element that is larger than the viewport size", async () => {
             await snap("chrome-throw-no-oversized-crop.png", $("#color-div")).catch((err) => err);
-            await setViewportSize(driver, {width: 100, height: 100});
+            await setViewportSize(driver, { width: 100, height: 100 });
             await snap("chrome-throw-no-oversized-crop.png", $("#color-div"));
+            await setViewportSize(driver, { width: 960, height: 768 }); // Slightly smaller than TravisCI
+        });
+
+        describe("and reconfiguring at runtime", () => {
+            it("should not trigger a baseline threshold error when setting the threshold very high", async () => {
+                snap.configure({ threshold: 0.99 });
+                $("#border-button").click();
+                const error = await snap("different-below-threshold.png", $("#color-div")).catch((err) => err);
+                expect(error).to.equal(undefined);
+            });
+
+            it("should trigger a baseline threshold error when setting the threshold very low", async () => {
+                snap.configure({ threshold: 0.001 });
+                $("#toggle-button").click();
+                const error = await snap("different-below-threshold.png", $("#color-div")).catch((err) => err);
+                expect(error).to.be.instanceOf(ScreenshotMismatchException);
+            });
+
         });
     });
 
@@ -280,19 +296,19 @@ describe("Snappit", () => {
         this.slow(2500);
 
         before(async () => {
-            // Reset reference images
-
-            // Initialize Snappit
-            const config: IConfig = {
+            const config: IBrowserConfig = {
                 browser: "chrome",
-                screenshotsDir: "test/screenshots",
-                threshold: 0.1,
-                throwNoBaseline: false,
                 useDirect: true,
             };
 
             snappit = new Snappit(config);
             driver = snappit.start();
+            snap.configure({
+                screenshotsDir: "test/screenshots",
+                threshold: 0.1,
+                throwNoBaseline: false,
+            });
+
             await setViewportSize(driver, {width: 960, height: 768}); // Slightly smaller than TravisCI
             await driver.get("http://localhost:8080/");
         });

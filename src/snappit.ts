@@ -1,4 +1,5 @@
 import * as fs from "fs-extra";
+import * as _ from "lodash";
 import * as path from "path";
 import {PNG} from "pngjs";
 import {
@@ -6,13 +7,21 @@ import {
     WebDriver, WebElement, WebElementPromise,
 } from "selenium-webdriver";
 
-import {IConfig, prepareConfig} from "./config";
+import {
+    IBrowserConfig,
+    ISnappitConfig,
+    prepareBrowserConfig,
+    prepareSnappitConfig,
+    validateSnappitConfig,
+} from "./config";
+
 import {
     NoDriverSessionException,
     ScreenshotMismatchException,
     ScreenshotNotPresentException,
     ScreenshotSizeException,
 } from "./errors";
+
 import {getDriver} from "./getDriver";
 import {Screenshot} from "./screenshot";
 
@@ -30,7 +39,21 @@ export async function snap(
     if (shorthandInstance) {
         return shorthandInstance.snap(name, element);
     }
+
     throw new NoDriverSessionException();
+}
+
+/* tslint:disable-next-line:no-namespace */
+export namespace snap {
+    export function configure(
+        config: ISnappitConfig,
+    ): void {
+        if (shorthandInstance) {
+            return shorthandInstance.configureSnap(config);
+        }
+
+        throw new NoDriverSessionException();
+    }
 }
 
 export function $(
@@ -39,29 +62,31 @@ export function $(
     if (shorthandInstance) {
         return shorthandInstance.$(selector);
     }
+
     throw new NoDriverSessionException();
 }
 
 export class Snappit {
-    private config: IConfig;
+    private browserConfig: IBrowserConfig;
+    private snappitConfig: ISnappitConfig;
     private driver: ThenableWebDriver;
 
     constructor(
-        config: IConfig,
+        config: IBrowserConfig,
         driver?: ThenableWebDriver,
     ) {
         if (driver instanceof WebDriver) {
             config.useProvidedDriver = true;
         }
 
-        this.config = prepareConfig(config);
-
+        this.browserConfig = prepareBrowserConfig(config);
+        this.snappitConfig = prepareSnappitConfig({});
         // Update the global selector function
     }
 
     public start(): ThenableWebDriver {
         if (!this.driver) {
-            this.driver = getDriver(this.config);
+            this.driver = getDriver(this.browserConfig);
         }
 
         // Update the exported shorthand methods
@@ -92,7 +117,7 @@ export class Snappit {
         name: string,
         element?: WebElementPromise,
     ): Promise<void> {
-        const filePath = await Screenshot.buildPath(name, this.driver, this.config.screenshotsDir);
+        const filePath = await Screenshot.buildPath(name, this.driver, this.snappitConfig.screenshotsDir);
         const newShot = await Screenshot.take(this.driver, element);
 
         // Baseline image exists
@@ -105,7 +130,7 @@ export class Snappit {
             }
 
             const diff = newShot.percentDiff(oldShot);
-            if (diff > this.config.threshold) {
+            if (diff > this.snappitConfig.threshold) {
                 const prettyDiff = (diff * 100).toFixed(2) + "%";
                 const message = `Screenshots do not match within threshold. ${prettyDiff} difference.`;
                 newShot.saveToPath(filePath);
@@ -116,9 +141,16 @@ export class Snappit {
         } else {
             newShot.saveToPath(filePath);
 
-            if (this.config.throwNoBaseline) {
+            if (this.snappitConfig.throwNoBaseline) {
                 throw new ScreenshotNotPresentException();
             }
         }
+    }
+
+    public configureSnap(
+        config: ISnappitConfig,
+    ): void {
+        this.snappitConfig = _.merge(this.snappitConfig, _.cloneDeep(config));
+        validateSnappitConfig(this.snappitConfig);
     }
 }

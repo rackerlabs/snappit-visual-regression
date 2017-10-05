@@ -4,44 +4,58 @@ import * as path from "path";
 import * as _ from "lodash";
 import * as Webdriver from "selenium-webdriver";
 
-export interface IConfigPaths {
+export interface IBrowserConfigPaths {
     chromeExe: string;
     geckoExe: string;
     seleniumPath: string;
 }
 
-export interface IConfig {
+export interface IBrowserConfig {
     browser?: string;
-    paths?: IConfigPaths;
-    screenshotsDir?: string;
+    paths?: IBrowserConfigPaths;
     serverUrl?: string;
-    threshold?: number;
-    throwNoBaseline?: boolean;
     useDirect?: boolean;
     useGeckoDriver?: boolean;
     useProvidedDriver?: boolean;
 }
 
-export function prepareConfig(config: IConfig): IConfig {
+export interface ISnappitConfig {
+    screenshotsDir?: string;
+    threshold?: number;
+    throwNoBaseline?: boolean;
+}
+
+export function prepareBrowserConfig(config: IBrowserConfig): IBrowserConfig {
     /* tslint:disable-next-line:prefer-const */
-    let prepared: IConfig = _.cloneDeep(config);
-    _.defaults(prepared, defaultConfig); // Mutates prepared
-    validateConfig(prepared);
+    let prepared: IBrowserConfig = _.cloneDeep(config);
+    _.defaults(prepared, defaultBrowserConfig); // Mutates prepared
+    validateBrowserConfig(prepared);
     return prepared;
 }
 
-const defaultConfig: IConfig = {
+export function prepareSnappitConfig(config: ISnappitConfig): ISnappitConfig {
+    /* tslint:disable-next-line:prefer-const */
+    let prepared: ISnappitConfig = _.cloneDeep(config);
+    _.defaults(prepared, defaultSnappitConfig); // Mutates prepared
+    validateSnappitConfig(prepared);
+    return prepared;
+}
+
+const defaultBrowserConfig: IBrowserConfig = {
     browser: "chrome",
     paths: getBinaryPaths(),
-    screenshotsDir: "./screenshots",
-    threshold: 0.04,
-    throwNoBaseline: true,
     useDirect: false,
     useGeckoDriver: false,
     useProvidedDriver: false,
 };
 
-function getBinaryPaths(): IConfigPaths {
+const defaultSnappitConfig: ISnappitConfig = {
+    screenshotsDir: "./screenshots",
+    threshold: 0.04,
+    throwNoBaseline: true,
+};
+
+function getBinaryPaths(): IBrowserConfigPaths {
     const seleniumPath = "bin/selenium/";
     const geckoExe = path.resolve(seleniumPath, "geckodriver");
     const chromeExe = path.resolve(seleniumPath, "chromedriver");
@@ -53,8 +67,8 @@ function getBinaryPaths(): IConfigPaths {
     };
 }
 
-function validateConfig(
-    config: IConfig,
+export function validateBrowserConfig(
+    config: IBrowserConfig,
 ): void {
     const validBrowsers = [Webdriver.Browser.CHROME, Webdriver.Browser.FIREFOX];
 
@@ -69,9 +83,14 @@ function validateConfig(
         throw new Error("Configuration error:  Please do only one of the following:" +
             'set "useDirect => true" OR provide a "serverUrl" option.');
     }
+}
 
+export function validateSnappitConfig(
+    config: ISnappitConfig,
+): void {
     const isValidThreshold = config.threshold && config.threshold >= 0 && config.threshold <= 0.99;
     if (!isValidThreshold) {
         throw new Error('Configuration error:  Please set a "threshold" between 0 and 0.99');
     }
+
 }
