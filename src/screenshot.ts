@@ -7,6 +7,8 @@ import {
     WebDriver, WebElement, WebElementPromise,
 } from "selenium-webdriver";
 
+import { chromeCanvasScreenshot } from './util/chromeElement';
+
 export class Screenshot {
     /**
      * Convert the name and directory of the screenshot into a path.
@@ -36,13 +38,15 @@ export class Screenshot {
         driver: ThenableWebDriver,
         element?: WebElementPromise,
     ): Promise<Screenshot> {
+        let buffer: Buffer;
         // This handles chrome because it doesn't impmlement element.takeScreenshot() yet.
         const isChrome = (await driver.getCapabilities()).get("browserName") === "chrome";
         if (element && isChrome) {
-            return this.chromeCanvasScreenshot(driver, element);
+            buffer = await chromeCanvasScreenshot(driver, element);
+        } else {
+            buffer = new Buffer(await (element ? element : driver).takeScreenshot(), "base64");
         }
 
-        const buffer = new Buffer(await (element ? element : driver).takeScreenshot(), "base64");
         const screenshot = new Screenshot(buffer);
         return screenshot;
     }

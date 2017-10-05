@@ -9,31 +9,38 @@ const fnDomToImage = `
     var callback = arguments[arguments.length - 1];
     var element = arguments[0];
 
-    // Flatten Shadow Dom if present
-    if (element.shadowRoot) {
-        var slots = element.shadowRoot.querySelectorAll('slot');
+    function walkNodeTree(node, target) {
+        if (node.nodeName === 'STYLE') {
+            return;
+        }
 
-        // Replace each slot with its assigned nodes
-        // NOTE: We might need to do this recursively
-        for (var slot of slots) {
-            var parent = slot.parentElement;
-
-            for (var node of slot.assignedNodes()) {
-                parent.appendChild(node);
+        if (node.nodeName === 'SLOT') {
+            for (var slotted of node.assignedNodes()) {
+                target.appendChild(slotted);
             };
-
-            parent.removeChild(slot);
+            return;
         }
 
-        // Add an invisible parent node with no styling
-        var randomId = Math.random().toString(16).slice(2);
-        var unstyled = document.createElement('unstyled-' + randomId);
-        for (var node of element.shadowRoot.childNodes()) {
-            unstyled.appendChild(node);
+        var clone = node.cloneNode();
+        // Inline CSS
+        // clone.style.cssText = window.getComputedStyle(node).cssText;
+        for (var child of node.children) {
+            walkNodeTree(child, clone);
         }
-        element.shadowRoot.appendChild(unstyled);
+        target.appendChild(clone);
+    }
 
-        element = unstyled;
+    // Walk the Shadow Dom, copying it into the light dom, recursively.
+    if (element.shadowRoot) {
+
+        for (var child of element.shadowRoot.children) {
+            walkNodeTree(child, element);
+        }
+        while (element.shadowRoot.hasChildNodes()) {
+            element.shadowRoot.firstChild.remove();
+        }
+        var slot = document.createElement('slot');
+        element.shadowRoot.
     }
 
     domtoimage.toPng(element).then(callback);
