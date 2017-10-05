@@ -6,6 +6,9 @@ node_js:
 addons:
   firefox: '53.0'
   chrome: stable
+branches:
+  only:
+  - master
 install:
 - travis_retry npm install
 - npm i -g greenkeeper-lockfile@1
