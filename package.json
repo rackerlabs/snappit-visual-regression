@@ -60,6 +60,6 @@
     "fs-extra": "^4.0.1",
     "lodash": "^4.17.4",
     "pngjs": "3.2.0",
-    "selenium-webdriver": "3.5.0"
+    "selenium-webdriver": "3.6.0"
   }
 }
