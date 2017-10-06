@@ -23,6 +23,7 @@ export interface ISnappitConfig {
     screenshotsDir?: string;
     threshold?: number;
     throwNoBaseline?: boolean;
+    throwScreenshotMismatch?: boolean;
 }
 
 export function prepareBrowserConfig(config: IConfig): IConfig {
@@ -53,6 +54,7 @@ const defaultSnappitConfig: ISnappitConfig = {
     screenshotsDir: "./screenshots",
     threshold: 0.04,
     throwNoBaseline: true,
+    throwScreenshotMismatch: true,
 };
 
 function getBinaryPaths(): IBrowserConfigPaths {

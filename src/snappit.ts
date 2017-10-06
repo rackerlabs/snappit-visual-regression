@@ -134,7 +134,11 @@ export class Snappit {
                 const prettyDiff = (diff * 100).toFixed(2) + "%";
                 const message = `Screenshots do not match within threshold. ${prettyDiff} difference.`;
                 newShot.saveToPath(filePath);
-                throw new ScreenshotMismatchException(message);
+                if (this.snappitConfig.throwScreenshotMismatch) {
+                    throw new ScreenshotMismatchException(message);
+                } else {
+                    console.log(message);
+                }
             }
 
         // No baseline image
