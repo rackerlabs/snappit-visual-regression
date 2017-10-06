@@ -10,9 +10,7 @@ import {
 import {
     IConfig,
     ISnappitConfig,
-    prepareBrowserConfig,
-    prepareSnappitConfig,
-    validateSnappitConfig,
+    prepareConfig,
 } from "./config";
 
 import {
@@ -67,8 +65,7 @@ export function $(
 }
 
 export class Snappit {
-    private browserConfig: IConfig;
-    private snappitConfig: ISnappitConfig;
+    private config: IConfig;
     private driver: ThenableWebDriver;
 
     constructor(
@@ -79,14 +76,13 @@ export class Snappit {
             config.useProvidedDriver = true;
         }
 
-        this.browserConfig = prepareBrowserConfig(config);
-        this.snappitConfig = prepareSnappitConfig(config as ISnappitConfig);
+        this.config = prepareConfig(config);
         // Update the global selector function
     }
 
     public start(): ThenableWebDriver {
         if (!this.driver) {
-            this.driver = getDriver(this.browserConfig);
+            this.driver = getDriver(this.config);
         }
 
         // Update the exported shorthand methods
@@ -117,7 +113,7 @@ export class Snappit {
         name: string,
         element?: WebElementPromise,
     ): Promise<void> {
-        const filePath = await Screenshot.buildPath(name, this.driver, this.snappitConfig.screenshotsDir);
+        const filePath = await Screenshot.buildPath(name, this.driver, this.config.screenshotsDir);
         const newShot = await Screenshot.take(this.driver, element);
 
         // Baseline image exists
@@ -130,7 +126,7 @@ export class Snappit {
             }
 
             const diff = newShot.percentDiff(oldShot);
-            if (diff > this.snappitConfig.threshold) {
+            if (diff > this.config.threshold) {
                 const prettyDiff = (diff * 100).toFixed(2) + "%";
                 const message = `Screenshots do not match within threshold. ${prettyDiff} difference.`;
                 newShot.saveToPath(filePath);
@@ -141,7 +137,7 @@ export class Snappit {
         } else {
             newShot.saveToPath(filePath);
 
-            if (this.snappitConfig.throwNoBaseline) {
+            if (this.config.throwNoBaseline) {
                 throw new ScreenshotNotPresentException();
             }
         }
@@ -150,7 +146,6 @@ export class Snappit {
     public configureSnap(
         config: ISnappitConfig,
     ): void {
-        this.snappitConfig = _.merge(this.snappitConfig, _.cloneDeep(config));
-        validateSnappitConfig(this.snappitConfig);
+        this.config = prepareConfig(config);
     }
 }
