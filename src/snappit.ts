@@ -1,5 +1,4 @@
 import * as fs from "fs-extra";
-import * as _ from "lodash";
 import * as path from "path";
 import {PNG} from "pngjs";
 import {
