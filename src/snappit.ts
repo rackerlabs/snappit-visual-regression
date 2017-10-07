@@ -1,4 +1,5 @@
 import * as fs from "fs-extra";
+import * as _ from "lodash";
 import * as path from "path";
 import {PNG} from "pngjs";
 import {
@@ -145,6 +146,6 @@ export class Snappit {
     public configureSnap(
         config: ISnappitConfig,
     ): void {
-        this.config = prepareConfig(config);
+        this.config = prepareConfig(_.merge({}, this.config, config));
     }
 }
