@@ -15,9 +15,11 @@ import {
 
 import {
     NoDriverSessionException,
+    ScreenshotException,
+    ScreenshotExceptionName,
     ScreenshotMismatchException,
-    ScreenshotNotPresentException,
-    ScreenshotSizeException,
+    ScreenshotNoBaselineException,
+    ScreenshotSizeDifferenceException,
 } from "./errors";
 
 import {getDriver} from "./getDriver";
@@ -109,6 +111,17 @@ export class Snappit {
         return this.driver.findElement(By.css(selector));
     }
 
+    public handleException(
+        error: ScreenshotException,
+    ): void {
+        if (this.config.logException.indexOf(error.id) >= 0) {
+            /* tslint:disable-next-line:no-console */
+            console.log(error.message);
+        } else {
+            throw error;
+        }
+    }
+
     public async snap(
         name: string,
         element?: WebElementPromise,
@@ -122,7 +135,7 @@ export class Snappit {
 
             if (!newShot.isSameSize(oldShot)) {
                 newShot.saveToPath(filePath);
-                throw new ScreenshotSizeException();
+                this.handleException(new ScreenshotSizeDifferenceException());
             }
 
             const diff = newShot.percentDiff(oldShot);
@@ -130,16 +143,13 @@ export class Snappit {
                 const prettyDiff = (diff * 100).toFixed(2) + "%";
                 const message = `Screenshots do not match within threshold. ${prettyDiff} difference.`;
                 newShot.saveToPath(filePath);
-                throw new ScreenshotMismatchException(message);
+                this.handleException(new ScreenshotMismatchException(message));
             }
 
         // No baseline image
         } else {
             newShot.saveToPath(filePath);
-
-            if (this.config.throwNoBaseline) {
-                throw new ScreenshotNotPresentException();
-            }
+            this.handleException(new ScreenshotNoBaselineException());
         }
     }
 
