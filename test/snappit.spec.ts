@@ -10,9 +10,10 @@ import {IConfig, ISnappitConfig} from "../src/config";
 import {
     NoDriverSessionException,
     ScreenshotException,
+    ScreenshotExceptionName,
     ScreenshotMismatchException,
-    ScreenshotNotPresentException,
-    ScreenshotSizeException,
+    ScreenshotNoBaselineException,
+    ScreenshotSizeDifferenceException,
 } from "../src/errors";
 import {$, snap, Snappit} from "../src/snappit";
 
@@ -219,7 +220,7 @@ describe("Snappit", () => {
 
         it("should throw an error and save if the screenshot does not exist", async () => {
             const error = await snap("does-not-exist.png", $("#color-div")).catch((err) => err);
-            expect(error).to.be.an.instanceof(ScreenshotNotPresentException);
+            expect(error).to.be.an.instanceof(ScreenshotNoBaselineException);
             expect(fs.existsSync("./test/screenshots/does-not-exist.png")).to.eql(true);
         });
 
@@ -227,7 +228,7 @@ describe("Snappit", () => {
             // ignore pre-populating of baseline
             await snap("different-size.png", $("body")).catch((err) => err);
             const error = await snap("different-size.png", $("#color-div")).catch((err) => err);
-            expect(error).to.be.an.instanceof(ScreenshotSizeException);
+            expect(error).to.be.an.instanceof(ScreenshotSizeDifferenceException);
         });
 
         it("should throw an error and save if the screenshot is different above threshold", async () => {
@@ -296,9 +297,9 @@ describe("Snappit", () => {
         before(async () => {
             const config: IConfig = {
                 browser: "chrome",
+                logException: [ScreenshotExceptionName.NO_BASELINE],
                 screenshotsDir: "test/screenshots",
                 threshold: 0.1,
-                throwNoBaseline: false,
                 useDirect: true,
             };
 

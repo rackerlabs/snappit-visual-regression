@@ -4,6 +4,8 @@ import * as path from "path";
 import * as _ from "lodash";
 import * as Webdriver from "selenium-webdriver";
 
+import {ScreenshotExceptionName} from "./errors";
+
 export interface IConfigPaths {
     chromeExe: string;
     geckoExe: string;
@@ -11,9 +13,9 @@ export interface IConfigPaths {
 }
 
 export interface ISnappitConfig {
+    logException?: string[];
     screenshotsDir?: string;
     threshold?: number;
-    throwNoBaseline?: boolean;
 }
 
 export interface IConfig extends ISnappitConfig {
@@ -35,10 +37,10 @@ export function prepareConfig(config: IConfig): IConfig {
 
 const defaultConfig: IConfig = {
     browser: "chrome",
+    logException: [],
     paths: getBinaryPaths(),
     screenshotsDir: "./screenshots",
     threshold: 0.04,
-    throwNoBaseline: true,
     useDirect: false,
     useGeckoDriver: false,
     useProvidedDriver: false,
@@ -76,5 +78,16 @@ function validateConfig(
     const isValidThreshold = config.threshold && config.threshold >= 0 && config.threshold <= 0.99;
     if (!isValidThreshold) {
         throw new Error('Configuration error:  Please set a "threshold" between 0 and 0.99');
+    }
+
+    const exceptions: string[] = [
+        ScreenshotExceptionName.MISMATCH,
+        ScreenshotExceptionName.NO_BASELINE,
+        ScreenshotExceptionName.SIZE_DIFFERENCE,
+    ];
+    const isValidLogException = config.logException.every((value) => exceptions.indexOf(value) >= 0);
+    if (!isValidLogException) {
+        throw new Error('Configuration error: "logException" should be an array with zero or more ' +
+            `exception names: "${exceptions.join('", "')}".`);
     }
 }
