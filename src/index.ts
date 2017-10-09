@@ -6,4 +6,4 @@ export {
     ScreenshotNotPresentException,
     ScreenshotSizeException,
 } from "./errors";
-export {IConfig, IConfigPaths} from "./config";
+export {IConfig, ISnappitConfig, IConfigPaths} from "./config";

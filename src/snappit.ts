@@ -1,4 +1,5 @@
 import * as fs from "fs-extra";
+import * as _ from "lodash";
 import * as path from "path";
 import {PNG} from "pngjs";
 import {
@@ -6,13 +7,19 @@ import {
     WebDriver, WebElement, WebElementPromise,
 } from "selenium-webdriver";
 
-import {IConfig, prepareConfig} from "./config";
+import {
+    IConfig,
+    ISnappitConfig,
+    prepareConfig,
+} from "./config";
+
 import {
     NoDriverSessionException,
     ScreenshotMismatchException,
     ScreenshotNotPresentException,
     ScreenshotSizeException,
 } from "./errors";
+
 import {getDriver} from "./getDriver";
 import {Screenshot} from "./screenshot";
 
@@ -30,7 +37,21 @@ export async function snap(
     if (shorthandInstance) {
         return shorthandInstance.snap(name, element);
     }
+
     throw new NoDriverSessionException();
+}
+
+/* tslint:disable-next-line:no-namespace */
+export namespace snap {
+    export function configure(
+        config: ISnappitConfig,
+    ): void {
+        if (shorthandInstance) {
+            return shorthandInstance.configureSnap(config);
+        }
+
+        throw new NoDriverSessionException();
+    }
 }
 
 export function $(
@@ -39,6 +60,7 @@ export function $(
     if (shorthandInstance) {
         return shorthandInstance.$(selector);
     }
+
     throw new NoDriverSessionException();
 }
 
@@ -55,7 +77,6 @@ export class Snappit {
         }
 
         this.config = prepareConfig(config);
-
         // Update the global selector function
     }
 
@@ -120,5 +141,11 @@ export class Snappit {
                 throw new ScreenshotNotPresentException();
             }
         }
+    }
+
+    public configureSnap(
+        config: ISnappitConfig,
+    ): void {
+        this.config = prepareConfig(_.merge({}, this.config, config));
     }
 }

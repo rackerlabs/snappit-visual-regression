@@ -10,13 +10,16 @@ export interface IConfigPaths {
     seleniumPath: string;
 }
 
-export interface IConfig {
-    browser?: string;
-    paths?: IConfigPaths;
+export interface ISnappitConfig {
     screenshotsDir?: string;
-    serverUrl?: string;
     threshold?: number;
     throwNoBaseline?: boolean;
+}
+
+export interface IConfig extends ISnappitConfig {
+    browser?: string;
+    paths?: IConfigPaths;
+    serverUrl?: string;
     useDirect?: boolean;
     useGeckoDriver?: boolean;
     useProvidedDriver?: boolean;
