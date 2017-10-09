@@ -10,6 +10,7 @@ import {IConfig, ISnappitConfig} from "../src/config";
 import {
     NoDriverSessionException,
     ScreenshotException,
+    ScreenshotExceptionName,
     ScreenshotMismatchException,
     ScreenshotNoBaselineException,
     ScreenshotSizeDifferenceException,
@@ -296,7 +297,7 @@ describe("Snappit", () => {
         before(async () => {
             const config: IConfig = {
                 browser: "chrome",
-                logException: ["NO_BASELINE"],
+                logException: [ScreenshotExceptionName.NO_BASELINE],
                 screenshotsDir: "test/screenshots",
                 threshold: 0.1,
                 useDirect: true,
