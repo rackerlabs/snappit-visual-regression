@@ -6,6 +6,9 @@ node_js:
 addons:
   firefox: '53.0'
   chrome: stable
+branch:
+  only:
+  - master
 install:
 - travis_retry npm install
 - npm i -g greenkeeper-lockfile@1
@@ -30,5 +33,7 @@ deploy:
   api_key:
     secure: KoMzkLNUB+ASPEQ/x9Q5gmj+Ba9g7W4bn6XHa1Vg4wvFDCH/hFn5tdbRsm+kQ9flThRUxHVYqwKg26ZANNyQVSJqjBq0/9qPOMd7bwFUpDkDWuoIRlvVdB8/Sek64nFLopuZKcBTUmPc+7XCYXNfzjFdYw54bBV3nHGtC751ZXbe+LIpjiItpawZI+Q8AN3oPmpaOpveyXP0wKdfBE23LMWfCL7Ei9J8sMnTJzWCljh+NbHCbAIj+4sZ52/D32davuMnl0uTgeYROmMlpV1pU/SgzGrOaKIB3wRwK66purR7PIAzljkjevESraVrFdkjHusP/GPKC/GoLOp63iKeiOSWUG+Am1cpXmMaHAVeH9uKr6lcIiT5+mOhDM7SCB83VyH1E3EvZ8I9U5r3jJD+YPQhPYxpIrqwVig7gT7hQN+6IcYt2sBK9tCPXPclV017o2B1I4nBTYc61n6v13Tgh2oVtm7ojOgbrnik049vvaixKHmo694E4x5CkLOflQpDSXMCeHCtXG7OOFt6Z7MBGSK+6K4cktBWVd+3fxhXr3DWHC8VRiJSgfq4jVErikBMZ0T7+bXNTSUJpKNV76ffoj8yoMq4jqjRD1f5Ell4Yl/Vf4ekTotxqlX1RzbXcRZm9I+VcGdlhwhzHGDf10tWFDOier+KoX3E/0B66adnE5U=
   on:
-    tags: true
+    condition: "-z $TRAVIS_TAG"
+    branch:
+    - master
     repo: rackerlabs/snappit-visual-regression
