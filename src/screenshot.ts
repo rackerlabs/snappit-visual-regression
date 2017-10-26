@@ -37,8 +37,8 @@ export class Screenshot {
         element?: WebElementPromise,
     ): Promise<Screenshot> {
         // This handles chrome because it doesn't impmlement element.takeScreenshot() yet.
-        const isChrome = (await driver.getCapabilities()).get("browserName") === "chrome";
-        if (element && isChrome) {
+        // const isChrome = (await driver.getCapabilities()).get("browserName") === "chrome";
+        if (element) {
             return this.chromeCanvasScreenshot(driver, element);
         }
 

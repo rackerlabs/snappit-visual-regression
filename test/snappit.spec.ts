@@ -17,6 +17,10 @@ import {
 } from "../src/errors";
 import {$, snap, Snappit} from "../src/snappit";
 
+async function resetViewport(driver: ThenableWebDriver) {
+    await driver.manage().window().setSize(1366, 768);
+}
+
 function browserTest(
     name: string,
     config: IConfig,
@@ -163,15 +167,14 @@ describe("Snappit", () => {
             // Initialize Snappit
             const config: IConfig = {
                 browser: "chrome",
+                headless: true,
                 screenshotsDir: "test/screenshots",
+                serverUrl: "http://localhost:4444/wd/hub",
                 threshold: 0.1,
-                useDirect: true,
             };
-
             snappit = new Snappit(config);
             driver = snappit.start();
-
-            await driver.manage().window().setSize(960, 768); // Slightly smaller than TravisCI
+            await resetViewport(driver);
             await driver.get("http://localhost:8080/");
         });
 
@@ -183,7 +186,7 @@ describe("Snappit", () => {
             try {
                 snap.configure({ threshold: 1.01 });
             } catch (e) {
-                expect(e.message).to.equal('Configuration error:  Please set a "threshold" between 0 and 0.99');
+                expect(e.message).to.equal('Configuration error: Please set a "threshold" between 0 and 0.99');
             }
         });
 
@@ -236,7 +239,7 @@ describe("Snappit", () => {
             await snap("chrome-throw-no-oversized-crop.png", $("#color-div")).catch((err) => err);
             await driver.manage().window().setSize(100, 100);
             await snap("chrome-throw-no-oversized-crop.png", $("#color-div"));
-            await driver.manage().window().setSize(960, 768); // Slightly smaller than TravisCI
+            await resetViewport(driver);
         });
 
         describe("and reconfiguring at runtime", () => {
@@ -274,8 +277,7 @@ describe("Snappit", () => {
 
             snappit = new Snappit(config);
             driver = snappit.start();
-
-            await driver.manage().window().setSize(960, 768); // Slightly smaller than TravisCI
+            await resetViewport(driver);
             await driver.get("http://localhost:8080/");
         });
 

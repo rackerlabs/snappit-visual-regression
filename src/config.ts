@@ -19,7 +19,8 @@ export interface ISnappitConfig {
 }
 
 export interface IConfig extends ISnappitConfig {
-    browser?: string;
+    browser: string;
+    headless?: boolean;
     paths?: IConfigPaths;
     serverUrl?: string;
     useDirect?: boolean;
@@ -63,19 +64,24 @@ function validateConfig(
 
     const isValidBrowser = _.includes(validBrowsers, config.browser);
     if (!config.useProvidedDriver && !isValidBrowser) {
-        throw new Error('Configuration error:  Please set a "browser" of either "chrome" or "firefox".');
+        throw new Error('Configuration error: Please set a "browser" of either "chrome" or "firefox".');
     }
 
     // useDirect and !_.isEmpty both return booleans, so we can !== them for an XOR.
     const isValidLocation = config.useDirect !== !_.isEmpty(config.serverUrl);
     if (!config.useProvidedDriver && !isValidLocation) {
-        throw new Error("Configuration error:  Please do only one of the following:" +
-            'set "useDirect => true" OR provide a "serverUrl" option.');
+        throw new Error("Configuration error: Please do only one of the following: " +
+                        'set "useDirect => true" OR provide a "serverUrl" option.');
+    }
+
+    if (config.headless && config.useDirect) {
+        throw new Error("Configuration error: Using headless mode with direct connect is unsupported. " +
+                        "Include a serverUrl, or set headless to false.");
     }
 
     const isValidThreshold = config.threshold && config.threshold >= 0 && config.threshold <= 0.99;
     if (!isValidThreshold) {
-        throw new Error('Configuration error:  Please set a "threshold" between 0 and 0.99');
+        throw new Error('Configuration error: Please set a "threshold" between 0 and 0.99');
     }
 
     const exceptions: string[] = [
@@ -86,6 +92,6 @@ function validateConfig(
     const isValidLogException = config.logException.every((value) => exceptions.indexOf(value) >= 0);
     if (!isValidLogException) {
         throw new Error('Configuration error: "logException" should be an array with zero or more ' +
-            `exception names: "${exceptions.join('", "')}".`);
+                        `exception names: "${exceptions.join('", "')}".`);
     }
 }
