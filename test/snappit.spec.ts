@@ -94,16 +94,9 @@ describe("Snappit", () => {
             useDirect: true,
         });
 
-        browserTest.skip("Legacy FireFox", {
+        browserTest("FireFox", {
             browser: "firefox",
             useDirect: true,
-            useGeckoDriver: false,
-        });
-
-        browserTest("GeckoDriver FireFox", {
-            browser: "firefox",
-            useDirect: true,
-            useGeckoDriver: true,
         });
 
     });
@@ -117,18 +110,10 @@ describe("Snappit", () => {
             useDirect: false,
         });
 
-        browserTest.skip("Legacy FireFox", {
-            browser: "firefox",
-            serverUrl: "http://localhost:4444/wd/hub",
-            useDirect: false,
-            useGeckoDriver: false,
-        });
-
         browserTest("GeckoDriver FireFox", {
             browser: "firefox",
             serverUrl: "http://localhost:4444/wd/hub",
             useDirect: false,
-            useGeckoDriver: true,
         });
 
     });

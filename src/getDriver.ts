@@ -51,61 +51,27 @@ function ThenableWebDriver<T extends Constructor<Webdriver.WebDriver>>(
     };
 }
 
-function getDirectDriver(
-    browser: IBrowserDriver,
-    executor?: string,
-    options?: Firefox.Options,
-): Webdriver.ThenableWebDriver {
-
-    // We don't want to build the service if executor is falsey.
-    const srv = executor ? new browser.ServiceBuilder(executor).build() : undefined;
-
-    // We have to cast here because TypeScript has no way of knowing we've modified the return value of createSession.
-    return ThenableWebDriver(browser.Driver).createSession(options, srv) as Webdriver.ThenableWebDriver;
-}
-
-function getRemoteDriver(
-    browserName: string,
-    serverUrl: string,
-    options: Firefox.Options,
-): Webdriver.ThenableWebDriver {
-
-    return new Webdriver.Builder()
-        .usingServer(serverUrl)
-        .forBrowser(browserName)
-        .setFirefoxOptions(options)
-        .build();
-}
-
 export function getDriver(
     config: IConfig,
 ): Webdriver.ThenableWebDriver {
 
-    let browser: IBrowserDriver;
-    let serviceBuilder: typeof remote.DriverService.Builder;
-    let executor: string = "";
-    let options: Firefox.Options;
-
-    // Since we don't use chrome options we can just always set firefox options here.
-    options = new Firefox.Options();
-    options.useGeckoDriver(config.useGeckoDriver);
-
-    // Determine the browser and executor path, default to Firefox
-    browser = Firefox;
-    if (config.useGeckoDriver) {
-        executor = config.paths.geckoExe;
-    }
-
-    // Change to chrome if necessary
-    if (config.browser === Webdriver.Browser.CHROME) {
-        browser = Chrome;
-        serviceBuilder = Chrome.ServiceBuilder;
-        executor = config.paths.chromeExe;
-    }
-
     // The default is to expect the remote case, so check for useDirect here.
     if (config.useDirect) {
-        return getDirectDriver(browser, executor, options);
+
+        // Determine the browser and executor path, default to Firefox
+        const isChrome = (config.browser === Webdriver.Browser.CHROME);
+        const browser: IBrowserDriver = isChrome ? Chrome : Firefox;
+        const executor = isChrome ? config.paths.chromeExe : config.paths.geckoExe;
+
+        // Build the custom executor
+        const srv = new browser.ServiceBuilder(executor).build();
+
+        // Must cast here because TypeScript has no way of knowing we've modified the return value of createSession.
+        return ThenableWebDriver(browser.Driver).createSession(null, srv) as Webdriver.ThenableWebDriver;
     }
-    return getRemoteDriver(config.browser, config.serverUrl, options);
+
+    return new Webdriver.Builder()
+        .usingServer(config.serverUrl)
+        .forBrowser(config.browser)
+        .build();
 }
