@@ -36,10 +36,9 @@ export class Screenshot {
         driver: ThenableWebDriver,
         element?: WebElementPromise,
     ): Promise<Screenshot> {
-        // This handles chrome because it doesn't impmlement element.takeScreenshot() yet.
-        // const isChrome = (await driver.getCapabilities()).get("browserName") === "chrome";
+        // This handles chrome, firefox headless, because they don't impmlement element.takeScreenshot() yet.
         if (element) {
-            return this.chromeCanvasScreenshot(driver, element);
+            return this.canvasScreenshot(driver, element);
         }
 
         const buffer = new Buffer(await (element ? element : driver).takeScreenshot(), "base64");
@@ -52,7 +51,7 @@ export class Screenshot {
      * This is a workaround to screenshotting an element in chrome because chromedriver does not
      * implement WebElement.takeScreenshot
      */
-    public static async chromeCanvasScreenshot(
+    public static async canvasScreenshot(
         driver: ThenableWebDriver,
         element: WebElementPromise,
     ): Promise<Screenshot> {
