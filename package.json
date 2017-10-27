@@ -39,27 +39,27 @@
   },
   "homepage": "https://github.com/jj4th/snappit-visual-regression#readme",
   "devDependencies": {
-    "@types/chai": "^4.0.1",
-    "@types/mocha": "^2.2.41",
-    "chai": "^4.0.2",
+    "@types/chai": "^4.0.4",
+    "@types/mocha": "^2.2.43",
+    "chai": "^4.1.2",
     "chai-as-promised": "^7.1.1",
     "chokidar-cli": "^1.2.0",
     "http-server": "^0.10.0",
     "inversify": "^4.2.0",
     "mocha": "^4.0.0",
     "reflect-metadata": "^0.1.10",
-    "tslint": "^5.5.0",
-    "typescript": "^2.4.2"
+    "tslint": "^5.8.0",
+    "typescript": "^2.5.3"
   },
   "dependencies": {
-    "@types/fs-extra": "^4.0.0",
-    "@types/lodash": "^4.14.68",
-    "@types/node": "^8.0.19",
-    "@types/selenium-webdriver": "^3.0.4",
-    "dom-to-image": "^2.5.2",
-    "fs-extra": "^4.0.1",
+    "@types/fs-extra": "^4.0.3",
+    "@types/lodash": "^4.14.80",
+    "@types/node": "^8.0.47",
+    "@types/selenium-webdriver": "^3.0.8",
+    "dom-to-image": "^2.6.0",
+    "fs-extra": "^4.0.2",
     "lodash": "^4.17.4",
-    "pngjs": "3.2.0",
-    "selenium-webdriver": "3.5.0"
+    "pngjs": "^3.3.0",
+    "selenium-webdriver": "^3.6.0"
   }
 }

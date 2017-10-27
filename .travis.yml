@@ -4,7 +4,7 @@ language: node_js
 node_js:
 - '8'
 addons:
-  firefox: '53.0'
+  firefox: '54.0'
   chrome: stable
 branch:
   only:

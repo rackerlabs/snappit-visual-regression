@@ -23,7 +23,6 @@ export interface IConfig extends ISnappitConfig {
     paths?: IConfigPaths;
     serverUrl?: string;
     useDirect?: boolean;
-    useGeckoDriver?: boolean;
     useProvidedDriver?: boolean;
 }
 
@@ -42,7 +41,6 @@ const defaultConfig: IConfig = {
     screenshotsDir: "./screenshots",
     threshold: 0.04,
     useDirect: false,
-    useGeckoDriver: false,
     useProvidedDriver: false,
 };
 
