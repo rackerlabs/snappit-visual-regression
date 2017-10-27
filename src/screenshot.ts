@@ -57,9 +57,9 @@ export class Screenshot {
         element: WebElementPromise,
     ): Promise<Screenshot> {
         await driver.manage().timeouts().setScriptTimeout(5000);
-        await driver.executeScript(fs.readFileSync(require.resolve("dom-to-image")).toString());
         const pngString = await driver.executeAsyncScript(`
             callback = arguments[arguments.length - 1];
+            ${fs.readFileSync(require.resolve("dom-to-image")).toString()}
             domtoimage.toPng(arguments[0]).then(callback);
             `, element) as string;
         const buffer = new Buffer(pngString.slice("data:image/png;base64,".length), "base64");

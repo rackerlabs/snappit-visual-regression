@@ -8,30 +8,30 @@ export class ScreenshotException extends Error {
 export class ScreenshotMismatchException extends ScreenshotException {
     public id = ScreenshotExceptionName.MISMATCH;
 
-    constructor(message = "Screenshots do not match within threshold.") {
-        super(message);
+    constructor(screenshotName: string) {
+        super(`Screenshots do not match within threshold: ${screenshotName}`);
     }
 }
 
 export class ScreenshotNoBaselineException extends ScreenshotException {
     public id = ScreenshotExceptionName.NO_BASELINE;
 
-    constructor(message = "No previous screenshot found.") {
-        super(message);
+    constructor(screenshotName: string) {
+        super(`No previous screenshot found: ${screenshotName}`);
     }
 }
 
 export class ScreenshotSizeDifferenceException extends ScreenshotException {
     public id = ScreenshotExceptionName.SIZE_DIFFERENCE;
 
-    constructor(message = "Screenshots differ with respect to dimension.") {
-        super(message);
+    constructor(screenshotName: string) {
+        super(`Screenshots differ with respect to dimension: ${screenshotName}`);
     }
 }
 
 export class NoDriverSessionException extends Error {
-    constructor(message = "You must call 'new Snappit(config).start();' before invoking this method.") {
-        super(message);
+    constructor() {
+        super("You must call 'new Snappit(config).start();' before invoking this method.");
     }
 }
 

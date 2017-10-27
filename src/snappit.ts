@@ -135,7 +135,7 @@ export class Snappit {
 
             if (!newShot.isSameSize(oldShot)) {
                 newShot.saveToPath(filePath);
-                this.handleException(new ScreenshotSizeDifferenceException());
+                this.handleException(new ScreenshotSizeDifferenceException(filePath));
             }
 
             const diff = newShot.percentDiff(oldShot);
@@ -143,13 +143,13 @@ export class Snappit {
                 const prettyDiff = (diff * 100).toFixed(2) + "%";
                 const message = `Screenshots do not match within threshold. ${prettyDiff} difference.`;
                 newShot.saveToPath(filePath);
-                this.handleException(new ScreenshotMismatchException(message));
+                this.handleException(new ScreenshotMismatchException(filePath));
             }
 
         // No baseline image
         } else {
             newShot.saveToPath(filePath);
-            this.handleException(new ScreenshotNoBaselineException());
+            this.handleException(new ScreenshotNoBaselineException(filePath));
         }
     }
 
