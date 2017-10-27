@@ -17,22 +17,6 @@ import {
 } from "../src/errors";
 import {$, snap, Snappit} from "../src/snappit";
 
-async function setViewportSize(
-    driver: ThenableWebDriver,
-    size: ISize,
-): Promise<void> {
-    const jsGetPadding: string = `return {
-        width: window.outerWidth - window.innerWidth,
-        height: window.outerHeight - window.innerHeight
-    }`;
-
-    const padding: ISize = await driver.executeScript(jsGetPadding) as ISize;
-    return driver.manage().window().setSize(
-        size.width + padding.width,
-        size.height + padding.height,
-    );
-}
-
 function browserTest(
     name: string,
     config: IConfig,
@@ -187,7 +171,7 @@ describe("Snappit", () => {
             snappit = new Snappit(config);
             driver = snappit.start();
 
-            await setViewportSize(driver, {width: 960, height: 768}); // Slightly smaller than TravisCI
+            await driver.manage().window().setSize(960, 768); // Slightly smaller than TravisCI
             await driver.get("http://localhost:8080/");
         });
 
@@ -250,9 +234,9 @@ describe("Snappit", () => {
 
         it("should handle an oversized element that is larger than the viewport size", async () => {
             await snap("chrome-throw-no-oversized-crop.png", $("#color-div")).catch((err) => err);
-            await setViewportSize(driver, { width: 100, height: 100 });
+            await driver.manage().window().setSize(100, 100);
             await snap("chrome-throw-no-oversized-crop.png", $("#color-div"));
-            await setViewportSize(driver, { width: 960, height: 768 }); // Slightly smaller than TravisCI
+            await driver.manage().window().setSize(960, 768); // Slightly smaller than TravisCI
         });
 
         describe("and reconfiguring at runtime", () => {
@@ -291,7 +275,7 @@ describe("Snappit", () => {
             snappit = new Snappit(config);
             driver = snappit.start();
 
-            await setViewportSize(driver, {width: 960, height: 768}); // Slightly smaller than TravisCI
+            await driver.manage().window().setSize(960, 768); // Slightly smaller than TravisCI
             await driver.get("http://localhost:8080/");
         });
 
