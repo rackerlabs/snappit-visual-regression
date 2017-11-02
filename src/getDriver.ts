@@ -54,24 +54,26 @@ function ThenableWebDriver<T extends Constructor<Webdriver.WebDriver>>(
 export function getDriver(
     config: IConfig,
 ): Webdriver.ThenableWebDriver {
+    const builder = new Webdriver.Builder()
+        .usingServer(config.serverUrl)
+        .forBrowser(config.browser);
 
-    // The default is to expect the remote case, so check for useDirect here.
-    if (config.useDirect) {
+    if (config.headless) {
+        if (config.browser === Webdriver.Browser.FIREFOX) {
+            const options = new Firefox.Options();
+            const binary = new Firefox.Binary();
 
-        // Determine the browser and executor path, default to Firefox
-        const isChrome = (config.browser === Webdriver.Browser.CHROME);
-        const browser: IBrowserDriver = isChrome ? Chrome : Firefox;
-        const executor = isChrome ? config.paths.chromeExe : config.paths.geckoExe;
+            binary.addArguments("-headless");
+            options.setBinary(binary);
+            builder.setFirefoxOptions(options);
 
-        // Build the custom executor
-        const srv = new browser.ServiceBuilder(executor).build();
+        } else if (config.browser === Webdriver.Browser.CHROME) {
+            const capabilities = Webdriver.Capabilities.chrome();
 
-        // Must cast here because TypeScript has no way of knowing we've modified the return value of createSession.
-        return ThenableWebDriver(browser.Driver).createSession(null, srv) as Webdriver.ThenableWebDriver;
+            capabilities.set("chromeOptions", { args: ["--headless"] });
+            builder.withCapabilities(capabilities);
+        }
     }
 
-    return new Webdriver.Builder()
-        .usingServer(config.serverUrl)
-        .forBrowser(config.browser)
-        .build();
+    return builder.build();
 }

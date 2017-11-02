@@ -3,7 +3,8 @@ import * as childProcess from "child_process";
 import {expect} from "chai";
 import * as fs from "fs-extra";
 import * as _ from "lodash";
-import {By, ISize, ThenableWebDriver, WebDriver} from "selenium-webdriver";
+import * as path from "path";
+import {By, ISize, ThenableWebDriver, WebDriver, WebElementPromise} from "selenium-webdriver";
 
 import {IConfig, ISnappitConfig} from "../src/config";
 
@@ -17,108 +18,36 @@ import {
 } from "../src/errors";
 import {$, snap, Snappit} from "../src/snappit";
 
+async function resizeViewport(
+    driver: ThenableWebDriver,
+    width: number = 1366,
+    height: number = 768,
+): Promise<void> {
+    await driver.manage().window().setSize(width, height);
+}
+
+type ISuiteFn = typeof describe | typeof describe.only | typeof describe.skip;
+
 function browserTest(
-    name: string,
+    suiteName: string,
     config: IConfig,
-    driver?: ThenableWebDriver,
-    skip?: boolean,
+    suiteFn: ISuiteFn = describe,
 ): void {
-    const suiteFn = skip ? describe.skip : describe;
 
-    suiteFn(name, function() {
-        let snappit: Snappit;
-        this.timeout(15000);
-        this.slow(2500);
-
-        before(() => {
-            snappit = new Snappit(config, driver);
-        });
-
-        if (!driver) {
-            it("should create a driver instance", async () => {
-                // Snappit will throw if there is a problem in driver creation.
-                driver = snappit.start();
-                await driver;
-            });
-        } else {
-            driver = driver as ThenableWebDriver;
-        }
-
-        it("should navigate to the localhost page", async () => {
-            // Cast here as TypeScript thinks driver might not be initialized.
-            driver.get("http://localhost:8080/");
-
-            expect(await $("#color-div").isDisplayed()).to.eql(true);
-        });
-
-        it("should terminate the driver instances", async () => {
-            await snappit.stop();
-        });
-    });
-}
-
-// This namespace is just used for declaration merging convenience for .skip
-/* tslint:disable-next-line:no-namespace */
-namespace browserTest {
-    export function skip(
-        name: string,
-        config: IConfig,
-        driver?: ThenableWebDriver,
-    ): void {
-        browserTest(name, config, driver, true);
-    }
-}
-
-describe("Snappit", () => {
-
-    describe("with useDirect set", () => {
-
-        browserTest("Chrome", {
-            browser: "chrome",
-            useDirect: true,
-        });
-
-        browserTest("FireFox", {
-            browser: "firefox",
-            useDirect: true,
-        });
-
-    });
-
-    // Using the default server URL
-    describe("when using a remote server", () => {
-
-        browserTest("Chrome", {
-            browser: "chrome",
-            serverUrl: "http://localhost:4444/wd/hub",
-            useDirect: false,
-        });
-
-        browserTest("GeckoDriver FireFox", {
-            browser: "firefox",
-            serverUrl: "http://localhost:4444/wd/hub",
-            useDirect: false,
-        });
-
-    });
-
-    describe("$ and snap shorthand methods", function() {
-        let snappit: Snappit;
+    suiteFn(suiteName, function() {
         let driver: ThenableWebDriver;
+        let snappit: Snappit;
         this.timeout(15000);
         this.slow(2500);
 
         before(() => {
-            // Initialize Snappit
-            const config: IConfig = {
-                browser: "chrome",
-                useDirect: true,
-            };
+            config.screenshotsDir = `./test/screenshots/${suiteName}`;
+            config.threshold = 0.1;
 
             snappit = new Snappit(config);
         });
 
-        describe("before 'snappit.start()", () => {
+        describe("before 'snappit.start()'", () => {
             it("should throw an error on invoking '$'", () => {
                 const fn = $ as () => any;
                 expect(fn).to.throw(NoDriverSessionException);
@@ -130,10 +59,27 @@ describe("Snappit", () => {
             });
         });
 
-        describe("after 'snappit.stop()", () => {
-            before(async () => {
+        describe("driver initialization", () => {
+            it("should create a driver instance", async () => {
+                // Snappit will throw if there is a problem in driver creation.
                 driver = snappit.start();
-                await driver.get("http://localhost:8080/");
+                await driver;
+            });
+
+            it("should navigate to the localhost page", async () => {
+                driver.get("http://localhost:8080/");
+
+                expect(await $("#color-div").isDisplayed()).to.eql(true);
+            });
+
+            it("should terminate the driver instance", async () => {
+                await snappit.stop();
+            });
+        });
+
+        describe("after 'snappit.stop()'", () => {
+            before(async () => {
+                await snappit.start();
                 await snappit.stop();
             });
 
@@ -147,146 +93,152 @@ describe("Snappit", () => {
                 expect(error).to.be.an.instanceOf(NoDriverSessionException);
             });
         });
-    });
 
-    describe("when using an existing driver", () => {
-        return null;
-    });
+        describe("screenshots", () => {
+            before(async () => {
+                driver = snappit.start();
+                await driver.get("http://localhost:8080/");
+            });
 
-    describe("when taking a screenshot", function() {
-        let snappit: Snappit;
-        let driver: ThenableWebDriver;
-        this.timeout(15000);
-        this.slow(2500);
+            after(async () => {
+                await snappit.stop();
+            });
 
-        before(async () => {
-            // Initialize Snappit
-            const config: IConfig = {
-                browser: "chrome",
-                screenshotsDir: "test/screenshots",
-                threshold: 0.1,
-                useDirect: true,
-            };
+            it("should throw an error if the screenshot does not exist", async () => {
+                const error = await snap("does-not-exist.png", $("#color-div")).catch((err) => err);
+                expect(error).to.be.an.instanceof(ScreenshotNoBaselineException);
+            });
 
-            snappit = new Snappit(config);
-            driver = snappit.start();
+            it("should throw an error if the screenshot is a different size", async () => {
+                await snap("different-size.png", $("body")).catch((err) => err);
+                const error = await snap("different-size.png", $("#color-div")).catch((err) => err);
+                expect(error).to.be.an.instanceof(ScreenshotSizeDifferenceException);
+            });
 
-            await driver.manage().window().setSize(960, 768); // Slightly smaller than TravisCI
-            await driver.get("http://localhost:8080/");
+            it("should throw an error if the screenshot is different above threshold", async () => {
+                await snap("different-above-threshold.png", $("#color-div")).catch((err) => err);
+                $("#toggle-button").click();
+                const error = await snap("different-above-threshold.png", $("#color-div")).catch((err) => err);
+                expect(error).to.be.an.instanceof(ScreenshotMismatchException);
+            });
+
+            it("should not throw an error if the screenshot is different below threshold", async () => {
+                await snap("different-below-threshold.png", $("#color-div")).catch((err) => err);
+                $("#border-button").click();
+                await snap("different-below-threshold.png", $("#color-div"));
+            });
+
+            it("should not throw an error if the screenshot shows no difference", async () => {
+                await snap("no-difference.png", $("#color-div")).catch((err) => err);
+                await snap("no-difference.png", $("#color-div"));
+            });
+
+            it("should handle an oversized element that is larger than the viewport size", async () => {
+                await snap("chrome-throw-no-oversized-crop.png", $("#color-div")).catch((err) => err);
+                await resizeViewport(driver, 100, 100);
+                await snap("chrome-throw-no-oversized-crop.png", $("#color-div"));
+                await resizeViewport(driver);
+            });
         });
 
-        after(async () => {
-            await snappit.stop();
-        });
+        describe("re-configuration", () => {
+            before(async () => {
+                driver = snappit.start();
+                await driver.get("http://localhost:8080/");
+            });
 
-        it("should reject invalid thresholds", () => {
-            try {
-                snap.configure({ threshold: 1.01 });
-            } catch (e) {
-                expect(e.message).to.equal('Configuration error:  Please set a "threshold" between 0 and 0.99');
-            }
-        });
+            after(async () => {
+                await snappit.stop();
+            });
 
-        it("should throw an error and save if the screenshot does not exist", async () => {
-            const error = await snap("does-not-exist.png", $("#color-div")).catch((err) => err);
-            expect(error).to.be.an.instanceof(ScreenshotNoBaselineException);
-            expect(fs.existsSync("./test/screenshots/does-not-exist.png")).to.eql(true);
-        });
+            it("should reject invalid thresholds", () => {
+                const fn = () => {
+                    snap.configure({ threshold: 1.01 });
+                };
+                expect(fn).to.throw('Configuration error: Please set a "threshold" between 0 and 0.99');
+            });
 
-        it("should throw an error and save if the screenshot is a different size", async () => {
-            // ignore pre-populating of baseline
-            await snap("different-size.png", $("body")).catch((err) => err);
-            const error = await snap("different-size.png", $("#color-div")).catch((err) => err);
-            expect(error).to.be.an.instanceof(ScreenshotSizeDifferenceException);
-        });
-
-        it("should throw an error and save if the screenshot is different above threshold", async () => {
-            // ignore pre-populating of baseline
-            await snap("different-above-threshold.png", $("#color-div")).catch((err) => err);
-            $("#toggle-button").click();
-            const error = await snap("different-above-threshold.png", $("#color-div")).catch((err) => err);
-            expect(error).to.be.an.instanceof(ScreenshotMismatchException);
-        });
-
-        it("should not throw an error or save if the screenshot is different below threshold", async () => {
-            // ignore pre-populating of baseline
-            await snap("different-below-threshold.png", $("#color-div")).catch((err) => err);
-            $("#border-button").click();
-            await snap("different-below-threshold.png", $("#color-div"));
-        });
-
-        it("should not throw an error or save if the screenshot shows no difference", async () => {
-            $("#border-button").click();
-            // ignore pre-populating of baseline
-            await snap("no-difference.png", $("#color-div")).catch((err) => err);
-            await snap("no-difference.png", $("#color-div"));
-        });
-
-        it("should take a screenshot with directory and path tokens", async () => {
-            const size = await driver.manage().window().getSize();
-            const version = (await driver.getCapabilities()).get("version").replace(/\W+/gi, "-");
-            const path = `./test/screenshots/chrome/${version}/${size.width}x${size.height}/test.png`;
-
-            // This will error because the screenshot does not already exist, but we only care if it's created.
-            await snap("{browserName}/{browserVersion}/{browserSize}/test.png").catch((err) => err);
-            expect(fs.existsSync(path)).to.eql(true);
-        });
-
-        it("should handle an oversized element that is larger than the viewport size", async () => {
-            await snap("chrome-throw-no-oversized-crop.png", $("#color-div")).catch((err) => err);
-            await driver.manage().window().setSize(100, 100);
-            await snap("chrome-throw-no-oversized-crop.png", $("#color-div"));
-            await driver.manage().window().setSize(960, 768); // Slightly smaller than TravisCI
-        });
-
-        describe("and reconfiguring at runtime", () => {
             it("should not trigger a baseline threshold error when setting the threshold very high", async () => {
                 snap.configure({ threshold: 0.99 });
-                $("#border-button").click();
+                $("#toggle-button").click();
                 const error = await snap("different-below-threshold.png", $("#color-div")).catch((err) => err);
                 expect(error).to.equal(undefined);
             });
 
             it("should trigger a baseline threshold error when setting the threshold very low", async () => {
                 snap.configure({ threshold: 0.001 });
-                $("#toggle-button").click();
+                $("#border-button").click();
                 const error = await snap("different-below-threshold.png", $("#color-div")).catch((err) => err);
                 expect(error).to.be.instanceOf(ScreenshotMismatchException);
             });
 
+            it("should not throw an error but still save if the screenshot does not exist", async () => {
+                snap.configure({ logException: [ScreenshotExceptionName.NO_BASELINE] });
+                await snap("throw-no-baseline-false.png", $("#color-div"));
+            });
+
+            it("should not throw an error but still save if the screenshot is a different size", async () => {
+                snap.configure({ logException: [ScreenshotExceptionName.SIZE_DIFFERENCE] });
+                await snap("throw-size-difference-false.png").catch((err) => err);
+                await snap("throw-size-difference-false.png", $("#color-div"));
+            });
+
+            it("should not throw an error but still save if the screenshot does not match", async () => {
+                snap.configure({ logException: [ScreenshotExceptionName.MISMATCH] });
+                await snap("throw-no-mismatch-false.png", $("#color-div")).catch((err) => err);
+                $("#border-button").click();
+                await snap("throw-no-mismatch-false.png", $("#color-div"));
+            });
+
+            it("should take a screenshot with directory and path tokens", async () => {
+                // tslint:disable-next-line:no-console
+                const size = await driver.manage().window().getSize();
+                const capabilities = await driver.getCapabilities();
+                const version = (capabilities.get("version") || capabilities.get("browserVersion"))
+                    .replace(/\W+/gi, "-");
+                const tokenPath = `${config.browser}/${version}/${size.width}x${size.height}/test.png`;
+
+                // This will error because the screenshot does not already exist, but we only care if it's created.
+                await snap("{browserName}/{browserVersion}/{browserSize}/test.png").catch((err) => err);
+                await snap(tokenPath);
+            });
         });
     });
+}
 
-    describe("when taking a screenshot with throwNoBaseline set to false", function() {
-        let snappit: Snappit;
-        let driver: ThenableWebDriver;
-        this.timeout(15000);
-        this.slow(2500);
+// tslint:disable-next-line:no-namespace
+namespace browserTest {
+    export function only(
+        suiteName: string,
+        config: IConfig,
+    ) {
+        return browserTest(suiteName, config, describe.only);
+    }
 
-        before(async () => {
-            const config: IConfig = {
-                browser: "chrome",
-                logException: [ScreenshotExceptionName.NO_BASELINE],
-                screenshotsDir: "test/screenshots",
-                threshold: 0.1,
-                useDirect: true,
-            };
+    export function skip(
+        suiteName: string,
+        config: IConfig,
+    ) {
+        return browserTest(suiteName, config, describe.skip);
+    }
+}
 
-            snappit = new Snappit(config);
-            driver = snappit.start();
+describe("Snappit", () => {
+    browserTest("Chrome", {
+        browser: "chrome",
+    });
 
-            await driver.manage().window().setSize(960, 768); // Slightly smaller than TravisCI
-            await driver.get("http://localhost:8080/");
-        });
+    browserTest("GeckoDriver FireFox", {
+        browser: "firefox",
+    });
 
-        after(async () => {
-            await snappit.stop();
-        });
+    browserTest("Chrome Headless", {
+        browser: "chrome",
+        headless: true,
+    });
 
-        it("should not throw an error but still save if the screenshot does not exist", async () => {
-            await snap("throw-no-baseline-false.png", $("#color-div"));
-            expect(fs.existsSync("./test/screenshots/throw-no-baseline-false.png")).to.eql(true);
-        });
-
+    browserTest("GeckoDriver FireFox Headless", {
+        browser: "firefox",
+        headless: true,
     });
 });
