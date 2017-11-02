@@ -23,7 +23,6 @@ export interface IConfig extends ISnappitConfig {
     headless?: boolean;
     paths?: IConfigPaths;
     serverUrl?: string;
-    useDirect?: boolean;
     useProvidedDriver?: boolean;
 }
 
@@ -37,11 +36,12 @@ export function prepareConfig(config: IConfig): IConfig {
 
 const defaultConfig: IConfig = {
     browser: "chrome",
+    headless: false,
     logException: [],
     paths: getBinaryPaths(),
     screenshotsDir: "./screenshots",
+    serverUrl: "http://localhost:4444/wd/hub",
     threshold: 0.04,
-    useDirect: false,
     useProvidedDriver: false,
 };
 
@@ -65,18 +65,6 @@ function validateConfig(
     const isValidBrowser = _.includes(validBrowsers, config.browser);
     if (!config.useProvidedDriver && !isValidBrowser) {
         throw new Error('Configuration error: Please set a "browser" of either "chrome" or "firefox".');
-    }
-
-    // useDirect and !_.isEmpty both return booleans, so we can !== them for an XOR.
-    const isValidLocation = config.useDirect !== !_.isEmpty(config.serverUrl);
-    if (!config.useProvidedDriver && !isValidLocation) {
-        throw new Error("Configuration error: Please do only one of the following: " +
-            'set "useDirect => true" OR provide a "serverUrl" option.');
-    }
-
-    if (config.headless && config.useDirect) {
-        throw new Error("Configuration error: Using headless mode with direct connect is unsupported. " +
-            "Include a serverUrl, or set headless to false.");
     }
 
     const isValidThreshold = config.threshold && config.threshold >= 0 && config.threshold <= 0.99;

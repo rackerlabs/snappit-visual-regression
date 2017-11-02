@@ -54,35 +54,25 @@ function ThenableWebDriver<T extends Constructor<Webdriver.WebDriver>>(
 export function getDriver(
     config: IConfig,
 ): Webdriver.ThenableWebDriver {
-    // The default is to expect the remote case, so check for useDirect here.
-    if (config.useDirect) {
-        const isChrome = (config.browser === Webdriver.Browser.CHROME);
-        const browser: IBrowserDriver = isChrome ? Chrome : Firefox;
-        const executor = isChrome ? config.paths.chromeExe : config.paths.geckoExe;
-        const srv = new browser.ServiceBuilder(executor).build();
-
-        // Must cast here because TypeScript has no way of knowing we've modified the return value of createSession.
-        return ThenableWebDriver(browser.Driver).createSession(null, srv) as Webdriver.ThenableWebDriver;
-    }
-
     const builder = new Webdriver.Builder()
         .usingServer(config.serverUrl)
         .forBrowser(config.browser);
 
-    let options: Firefox.Options | Chrome.Options;
-    if (config.browser === Webdriver.Browser.FIREFOX) {
-        options = new Firefox.Options();
-        if (config.headless) {
+    if (config.headless) {
+        if (config.browser === Webdriver.Browser.FIREFOX) {
+            const options = new Firefox.Options();
             const binary = new Firefox.Binary();
-            binary.addArguments("--headless");
-            options.setBinary(binary);
-        }
 
-        builder.setFirefoxOptions(options as Firefox.Options);
-    } else if (config.browser === Webdriver.Browser.CHROME && config.headless) {
-        const capabilities = Webdriver.Capabilities.chrome();
-        capabilities.set("chromeOptions", { args: ["--headless"] });
-        builder.withCapabilities(capabilities);
+            binary.addArguments("-headless");
+            options.setBinary(binary);
+            builder.setFirefoxOptions(options);
+
+        } else if (config.browser === Webdriver.Browser.CHROME) {
+            const capabilities = Webdriver.Capabilities.chrome();
+
+            capabilities.set("chromeOptions", { args: ["--headless"] });
+            builder.withCapabilities(capabilities);
+        }
     }
 
     return builder.build();

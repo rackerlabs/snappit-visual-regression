@@ -103,6 +103,8 @@ export class Snappit {
         } catch (e) {
             // Ignore the driver quit error
         }
+
+        this.driver = undefined;
     }
 
     public $(
@@ -132,14 +134,12 @@ export class Snappit {
         // Baseline image exists
         if (fs.existsSync(filePath)) {
             const oldShot = Screenshot.fromPath(filePath);
+            const diff = newShot.percentDiff(oldShot);
 
             if (!newShot.isSameSize(oldShot)) {
                 newShot.saveToPath(filePath);
                 this.handleException(new ScreenshotSizeDifferenceException(filePath));
-            }
-
-            const diff = newShot.percentDiff(oldShot);
-            if (diff > this.config.threshold) {
+            } else if (diff > this.config.threshold) {
                 const prettyDiff = (diff * 100).toFixed(2) + "%";
                 const message = `Screenshots do not match within threshold. ${prettyDiff} difference.`;
                 newShot.saveToPath(filePath);

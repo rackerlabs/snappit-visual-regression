@@ -18,10 +18,11 @@ export class Screenshot {
     ): Promise<string> {
         const capabilities = await driver.getCapabilities();
         const size = await driver.manage().window().getSize();
+        const version = (capabilities.get("version") || capabilities.get("browserVersion"));
         const screenshotPath = path.resolve(screenshotsDir);
         return path.join(screenshotPath, name)
             .replace("{browserName}", capabilities.get("browserName"))
-            .replace("{browserVersion}", capabilities.get("version"))
+            .replace("{browserVersion}", version)
             .replace("{browserSize}", `${size.width}x${size.height}`)
             .replace(/.png$/, "")
             .split(path.sep)
