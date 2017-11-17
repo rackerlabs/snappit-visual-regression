@@ -3,9 +3,135 @@ import * as path from "path";
 
 import { PNG } from "pngjs";
 import {
-    By, error as WebDriverError, ISize, ThenableWebDriver,
-    WebDriver, WebElement, WebElementPromise,
+    By,
+    error as WebDriverError,
+    ILocation,
+    ISize,
+    ThenableWebDriver,
+    WebDriver,
+    WebElement,
+    WebElementPromise,
 } from "selenium-webdriver";
+
+class ElementScreenshotter {
+    private driver: WebDriver;
+    private element: WebElementPromise;
+    private devicePixelRatio: number;
+
+    constructor(
+        driver: WebDriver,
+        element: WebElementPromise,
+        devicePixelRatio = 1,
+    ) {
+        this.driver = driver;
+        this.element = element;
+        this.devicePixelRatio = devicePixelRatio;
+    }
+
+    /**
+     * Don't forget to crop from the right/bottom if there is a partial element left over!
+     * This function takes pictures of (for example) screenshots 0, 1, and 2.
+     * It crops image 2 if needed -- when a leftover portion of the element still visible.
+     *
+     *  +============+
+     *  | Oversized  |
+     *  |  Element   |
+     *  +============+
+     *  |----|----|__|
+     *    ^0   ^1  ^X
+     *
+     *  |_______|----|
+     *    ^X      ^2
+     *
+     *  |_______..|--|
+     *             ^2
+     *
+     *  +============+
+     *  | Oversized  |
+     *  |  Element   |
+     *  +============+
+     *  |----|----|--|
+     *    ^0   ^1  ^2
+     */
+    public async take() {
+        const devicePixelRatio = (await this.driver.executeScript("return window.devicePixelRatio") as number);
+        const viewport: ISize = {
+            height: (await this.driver.executeScript("return window.innerHeight")) as number,
+            width: (await this.driver.executeScript("return window.innerWidth")) as number,
+        }
+
+        const size = await this.element.getSize();
+        const loc = await this.element.getLocation();
+
+        const screenshotsLengthwise = Math.floor(size.width / viewport.width);
+        const leftoverLengthwise = size.width % viewport.width;
+        const screenshotsHeightwise = Math.floor(size.height / viewport.height);
+        const leftoverHeightwise = size.height % viewport.height;
+
+        let x = loc.x;
+        let y = loc.y;
+        const elementScreenshot = new PNG({ width: size.width * devicePixelRatio, height: size.height * devicePixelRatio });
+
+        const takeAlongTotalWidth = async () => {
+            const ss = async () => PNG.sync.read(new Buffer(await this.driver.takeScreenshot(), "base64"));
+            const minX = Math.min(viewport.width, size.width - x);
+            const minY = Math.min(viewport.height, size.height - y); // (y - loc.y));
+            const fullScreenshotsLengthwise = [...Array(screenshotsLengthwise).keys()].reverse();
+            for (const widthShotsRemaining of fullScreenshotsLengthwise) {
+                await this.driver.executeScript(`window.scroll(${x}, ${y})`);
+                PNG.bitblt(
+                    await ss(), elementScreenshot,
+                    0, 0,
+                    minX * devicePixelRatio, minY * devicePixelRatio,
+                    (x - loc.x) * devicePixelRatio, (y - loc.y) * devicePixelRatio,
+                );
+
+                if (widthShotsRemaining) {
+                    x += viewport.width;
+                }
+            }
+
+            if (leftoverLengthwise) {
+                let rightHandTrimPoint = 0;
+                if (screenshotsLengthwise) {
+                    x += leftoverLengthwise;
+                    rightHandTrimPoint = (viewport.width - leftoverLengthwise) * devicePixelRatio;
+                }
+
+                await this.driver.executeScript(`window.scroll(${x}, ${y})`);
+                PNG.bitblt(
+                    await ss(), elementScreenshot,
+                    rightHandTrimPoint, 0,
+                    leftoverLengthwise * devicePixelRatio, minY * devicePixelRatio,
+                    (size.width - leftoverLengthwise) * devicePixelRatio, (y - loc.y) * devicePixelRatio,
+                );
+            }
+
+            // reset back to the left-side of the element
+            x = loc.x;
+            await this.driver.executeScript(`window.scroll(${x}, ${y})`);
+        };
+
+        const fullScreenshotsHeightwise = [...Array(screenshotsHeightwise).keys()].reverse();
+        for (const heightShotsRemaining of fullScreenshotsHeightwise) {
+            await takeAlongTotalWidth();
+
+            if (heightShotsRemaining) {
+                y += viewport.height;
+            }
+        }
+
+        if (leftoverHeightwise) {
+            if (screenshotsHeightwise) {
+                y += leftoverHeightwise;
+            }
+
+            await takeAlongTotalWidth();
+        }
+
+        return elementScreenshot;
+    }
+}
 
 export class Screenshot {
     /**
@@ -37,32 +163,16 @@ export class Screenshot {
         driver: ThenableWebDriver,
         element?: WebElementPromise,
     ): Promise<Screenshot> {
+        let buffer: Buffer | PNG;
+
         // This handles chrome, firefox headless, because they don't impmlement element.takeScreenshot() yet.
         if (element) {
-            return this.canvasScreenshot(driver, element);
+            const elementSnap = new ElementScreenshotter(driver, element);
+            buffer = await elementSnap.take();
+        } else {
+            buffer = new Buffer(await driver.takeScreenshot(), "base64");
         }
 
-        const buffer = new Buffer(await (element ? element : driver).takeScreenshot(), "base64");
-        const screenshot = new Screenshot(buffer);
-        return screenshot;
-    }
-
-    /**
-     * Generate a screenshot via chrome canvas.
-     * This is a workaround to screenshotting an element in chrome because chromedriver does not
-     * implement WebElement.takeScreenshot
-     */
-    public static async canvasScreenshot(
-        driver: ThenableWebDriver,
-        element: WebElementPromise,
-    ): Promise<Screenshot> {
-        await driver.manage().timeouts().setScriptTimeout(5000);
-        const pngString = await driver.executeAsyncScript(`
-            callback = arguments[arguments.length - 1];
-            ${fs.readFileSync(require.resolve("dom-to-image")).toString()}
-            domtoimage.toPng(arguments[0]).then(callback);
-            `, element) as string;
-        const buffer = new Buffer(pngString.slice("data:image/png;base64,".length), "base64");
         const screenshot = new Screenshot(buffer);
         return screenshot;
     }
