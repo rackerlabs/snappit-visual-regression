@@ -153,7 +153,7 @@ function browserTest(
 
                 it("should take a snapshot of an element that is too wide and too tall", async () => {
                     await driver.get("http://localhost:8080/too-wide-too-tall");
-                    await snap("too-wide-too-tall.png", $("#too-wide-too-tall"));
+                    await snap("too-wide-too-tall.png", $("#too-wide-too-tall")).catch((err) => err);
                 });
             });
         });
@@ -241,9 +241,9 @@ namespace browserTest {
 }
 
 describe("Snappit", () => {
-    // browserTest("Chrome", {
-    //     browser: "chrome",
-    // });
+    browserTest("Chrome", {
+        browser: "chrome",
+    });
 
     // browserTest("GeckoDriver FireFox", {
     //     browser: "firefox",

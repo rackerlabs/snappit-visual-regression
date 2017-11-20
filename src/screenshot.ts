@@ -16,13 +16,16 @@ import {
 class ElementScreenshotter {
     private driver: WebDriver;
     private element: WebElementPromise;
+    private firefoxHeadless: boolean;
 
     constructor(
         driver: WebDriver,
         element: WebElementPromise,
+        firefoxHeadless = false,
     ) {
         this.driver = driver;
         this.element = element;
+        this.firefoxHeadless = firefoxHeadless;
     }
 
     /**
@@ -57,6 +60,11 @@ class ElementScreenshotter {
             height: (await this.driver.executeScript("return window.innerHeight")) as number,
             width: (await this.driver.executeScript("return window.innerWidth")) as number,
         };
+
+        if (this.firefoxHeadless) {
+            viewport.height = viewport.height -= 15;
+            viewport.width = viewport.width -= 15;
+        }
 
         const size = await this.element.getSize();
         const loc = await this.element.getLocation();
@@ -181,7 +189,6 @@ export class Screenshot {
     ): Promise<Screenshot> {
         let buffer: Buffer | PNG;
 
-        // This handles chrome, firefox headless, because they don't impmlement element.takeScreenshot() yet.
         if (element) {
             const elementSnap = new ElementScreenshotter(driver, element);
             buffer = await elementSnap.take();
