@@ -100,6 +100,10 @@ function browserTest(
                 await driver.get("http://localhost:8080/");
             });
 
+            after(async () => {
+                await snappit.stop();
+            });
+
             it("should throw an error if the screenshot does not exist", async () => {
                 const error = await snap("does-not-exist.png", $("#color-div")).catch((err) => err);
                 expect(error).to.be.an.instanceof(ScreenshotNoBaselineException);
@@ -129,33 +133,21 @@ function browserTest(
                 await snap("no-difference.png", $("#color-div"));
             });
 
-            it("should handle an oversized element that is larger than the viewport size", async () => {
-                await snap("chrome-throw-no-oversized-crop.png", $("#color-div")).catch((err) => err);
-                await resizeViewport(driver, 100, 100);
-                await snap("chrome-throw-no-oversized-crop.png", $("#color-div"));
-                await resizeViewport(driver);
+            it("should take a snapshot of an element that is too wide", async () => {
+                await driver.get("http://localhost:8080/too-wide");
+                await snap("too-wide.png", $("#too-wide")).catch((err) => err);
             });
 
-            describe.only("of oversized elements", () => {
-                after(async () => {
-                    await snappit.stop();
-                });
-
-                it("should take a snapshot of an element that is too wide", async () => {
-                    await driver.get("http://localhost:8080/too-wide");
-                    await snap("too-wide.png", $("#too-wide")).catch((err) => err);
-                });
-
-                it("should take a snapshot of an element that is too tall", async () => {
-                    await driver.get("http://localhost:8080/too-tall");
-                    await snap("too-tall.png", $("#too-tall")).catch((err) => err);
-                });
-
-                it.only("should take a snapshot of an element that is too wide and too tall", async () => {
-                    await driver.get("http://localhost:8080/too-wide-too-tall");
-                    await snap("too-wide-too-tall.png", $("#too-wide-too-tall")).catch((err) => err);
-                });
+            it("should take a snapshot of an element that is too tall", async () => {
+                await driver.get("http://localhost:8080/too-tall");
+                await snap("too-tall.png", $("#too-tall")).catch((err) => err);
             });
+
+            it("should take a snapshot of an element that is too wide and too tall", async () => {
+                await driver.get("http://localhost:8080/too-wide-too-tall");
+                await snap("too-wide-too-tall.png", $("#too-wide-too-tall")).catch((err) => err);
+            });
+
         });
 
         describe("re-configuration", () => {

@@ -13,6 +13,20 @@ import {
     WebElementPromise,
 } from "selenium-webdriver";
 
+const SVR_ID = "added-by-snappit-visual-regression";
+const DROP_SCROLLBARS = `
+var head = document.querySelector("head");
+var style = document.createElement("style");
+style.id = "${SVR_ID}";
+style.type = "text/css";
+style.innerText = "::-webkit-scrollbar { display: none; }"
+head.appendChild(style);
+`;
+
+const REMOVE_DROP_SCROLLBARS = `
+document.querySelector('#${SVR_ID}').remove();
+`;
+
 class ElementScreenshotter {
     private driver: WebDriver;
     private element: WebElementPromise;
@@ -52,15 +66,17 @@ class ElementScreenshotter {
      *    ^0   ^1  ^2
      */
     public async take() {
+        const firefoxHeadless = (await this.driver.getCapabilities()).get("moz:headless");
         const devicePixelRatio = (await this.driver.executeScript("return window.devicePixelRatio") as number);
         const viewport: ISize = {
             height: (await this.driver.executeScript("return window.innerHeight")) as number,
             width: (await this.driver.executeScript("return window.innerWidth")) as number,
         };
 
-        if ((await this.driver.getCapabilities()).get("moz:headless")) {
-            viewport.height = viewport.height -= 15;
-            viewport.width = viewport.width -= 15;
+        if (firefoxHeadless) {
+            const OFFSET = 15; // pixels
+            viewport.height = viewport.height -= OFFSET;
+            viewport.width = viewport.width -= OFFSET;
         }
 
         const size = await this.element.getSize();
@@ -98,18 +114,16 @@ class ElementScreenshotter {
             }
 
             if (leftoverLengthwise) {
-                let rightHandTrimPoint = 0;
                 if (screenshotsLengthwise) {
                     x += leftoverLengthwise;
-                    rightHandTrimPoint = (viewport.width - leftoverLengthwise) * devicePixelRatio;
                 }
 
                 await this.driver.executeScript(`window.scroll(${x}, ${y})`);
                 PNG.bitblt(
                     await ss(), elementScreenshot,
-                    rightHandTrimPoint, 0,
-                    leftoverLengthwise * devicePixelRatio, minY * devicePixelRatio,
-                    (size.width - leftoverLengthwise) * devicePixelRatio, (y - loc.y) * devicePixelRatio,
+                    0, 0,
+                    minX * devicePixelRatio, minY * devicePixelRatio,
+                    (x - loc.x) * devicePixelRatio, (y - loc.y) * devicePixelRatio,
                 );
             }
 
@@ -118,6 +132,7 @@ class ElementScreenshotter {
             await this.driver.executeScript(`window.scroll(${x}, ${y})`);
         };
 
+        await this.driver.executeScript(DROP_SCROLLBARS);
         const fullScreenshotsHeightwise = [...Array(screenshotsHeightwise).keys()].reverse();
         for (const heightShotsRemaining of fullScreenshotsHeightwise) {
             await takeAlongTotalWidth();
@@ -135,6 +150,7 @@ class ElementScreenshotter {
             await takeAlongTotalWidth();
         }
 
+        await this.driver.executeScript(REMOVE_DROP_SCROLLBARS);
         return elementScreenshot;
     }
 }
