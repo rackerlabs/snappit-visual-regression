@@ -53,7 +53,6 @@ class ElementScreenshotter {
      */
     public async take() {
         const devicePixelRatio = (await this.driver.executeScript("return window.devicePixelRatio") as number);
-        console.log("ratio", devicePixelRatio);
         const viewport: ISize = {
             height: (await this.driver.executeScript("return window.innerHeight")) as number,
             width: (await this.driver.executeScript("return window.innerWidth")) as number,
@@ -79,25 +78,13 @@ class ElementScreenshotter {
             width: size.width * devicePixelRatio,
         });
 
-        console.log("viewport", viewport.width, "x", viewport.height);
-        console.log("elementScreenshot", elementScreenshot.width, "x", elementScreenshot.height);
-        console.log("size", size.width, "x", size.height);
-        console.log("loc", loc.x, loc.y);
-
-        console.log("screenshotsLengthwise", Math.floor(size.width / viewport.width));
-        console.log("leftoverLengthwise", size.width % viewport.width);
-        console.log("screenshotsHeightwise", Math.floor(size.height / viewport.height));
-        console.log("leftoverHeightwise", size.height % viewport.height);
-
         const takeAlongTotalWidth = async () => {
             const ss = async () => PNG.sync.read(new Buffer(await this.driver.takeScreenshot(), "base64"));
             const minX = Math.min(viewport.width, size.width - x);
             const minY = Math.min(viewport.height, size.height - y);
             const fullScreenshotsLengthwise = [...Array(screenshotsLengthwise).keys()].reverse();
             for (const widthShotsRemaining of fullScreenshotsLengthwise) {
-                console.log(`0: window.scroll(${x}, ${y})`);
                 await this.driver.executeScript(`window.scroll(${x}, ${y})`);
-                console.log(`png0: (0, 0)-(${minX}, ${minY}) -> (${x - loc.x}, ${y - loc.y})`);
                 PNG.bitblt(
                     await ss(), elementScreenshot,
                     0, 0,
@@ -117,9 +104,7 @@ class ElementScreenshotter {
                     rightHandTrimPoint = (viewport.width - leftoverLengthwise) * devicePixelRatio;
                 }
 
-                console.log(`1: window.scroll(${x}, ${y})`);
                 await this.driver.executeScript(`window.scroll(${x}, ${y})`);
-                console.log(`png1: (${rightHandTrimPoint}, 0)-(${leftoverLengthwise}, ${minY}) -> (${size.width - leftoverLengthwise}, ${y - loc.y})`);
                 PNG.bitblt(
                     await ss(), elementScreenshot,
                     rightHandTrimPoint, 0,
@@ -130,7 +115,6 @@ class ElementScreenshotter {
 
             // reset back to the left-side of the element
             x = loc.x;
-            console.log(`2: window.scroll(${x}, ${y})`);
             await this.driver.executeScript(`window.scroll(${x}, ${y})`);
         };
 
