@@ -21,11 +21,9 @@ class ElementScreenshotter {
     constructor(
         driver: WebDriver,
         element: WebElementPromise,
-        firefoxHeadless = false,
     ) {
         this.driver = driver;
         this.element = element;
-        this.firefoxHeadless = firefoxHeadless;
     }
 
     /**
@@ -61,7 +59,7 @@ class ElementScreenshotter {
             width: (await this.driver.executeScript("return window.innerWidth")) as number,
         };
 
-        if (this.firefoxHeadless) {
+        if ((await this.driver.getCapabilities()).get("moz:headless")) {
             viewport.height = viewport.height -= 15;
             viewport.width = viewport.width -= 15;
         }
@@ -188,7 +186,6 @@ export class Screenshot {
         element?: WebElementPromise,
     ): Promise<Screenshot> {
         let buffer: Buffer | PNG;
-
         if (element) {
             const elementSnap = new ElementScreenshotter(driver, element);
             buffer = await elementSnap.take();
