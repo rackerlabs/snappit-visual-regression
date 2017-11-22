@@ -30,7 +30,6 @@ document.querySelector('#${SVR_ID}').remove();
 class ElementScreenshotter {
     private driver: WebDriver;
     private element: WebElementPromise;
-    private firefoxHeadless: boolean;
 
     constructor(
         driver: WebDriver,
@@ -40,31 +39,6 @@ class ElementScreenshotter {
         this.element = element;
     }
 
-    /**
-     * Don't forget to crop from the right/bottom if there is a partial element left over!
-     * This function takes pictures of (for example) screenshots 0, 1, and 2.
-     * It crops image 2 if needed -- when a leftover portion of the element still visible.
-     *
-     *  +============+
-     *  | Oversized  |
-     *  |  Element   |
-     *  +============+
-     *  |----|----|__|
-     *    ^0   ^1  ^X
-     *
-     *  |_______|----|
-     *    ^X      ^2
-     *
-     *  |_______..|--|
-     *             ^2
-     *
-     *  +============+
-     *  | Oversized  |
-     *  |  Element   |
-     *  +============+
-     *  |----|----|--|
-     *    ^0   ^1  ^2
-     */
     public async take() {
         const firefoxHeadless = (await this.driver.getCapabilities()).get("moz:headless");
         const devicePixelRatio = (await this.driver.executeScript("return window.devicePixelRatio") as number);
@@ -83,8 +57,8 @@ class ElementScreenshotter {
         const loc = await this.element.getLocation();
 
         const screenshotsLengthwise = Math.floor(size.width / viewport.width);
-        const leftoverLengthwise = size.width % viewport.width;
         const screenshotsHeightwise = Math.floor(size.height / viewport.height);
+        const leftoverLengthwise = size.width % viewport.width;
         const leftoverHeightwise = size.height % viewport.height;
 
         let x = loc.x;
