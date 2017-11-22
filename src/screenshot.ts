@@ -9,7 +9,6 @@ import {
     ISize,
     WebDriver,
     WebElement,
-    WebElementPromise,
 } from "selenium-webdriver";
 
 const SVR_ID = "added-by-snappit-visual-regression";
@@ -28,11 +27,11 @@ document.querySelector('#${SVR_ID}').remove();
 
 class ElementScreenshotter {
     private driver: WebDriver;
-    private element: WebElementPromise;
+    private element: WebElement;
 
     constructor(
         driver: WebDriver,
-        element: WebElementPromise,
+        element: WebElement,
     ) {
         this.driver = driver;
         this.element = element;
@@ -166,7 +165,7 @@ export class Screenshot {
      */
     public static async take(
         driver: WebDriver,
-        element?: WebElementPromise,
+        element?: WebElement,
     ): Promise<Screenshot> {
         let buffer: Buffer | PNG;
         if (element) {

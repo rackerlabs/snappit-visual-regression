@@ -4,7 +4,7 @@ import * as path from "path";
 import {PNG} from "pngjs";
 import {
     By, error as WebDriverError,
-    WebDriver, WebElement, WebElementPromise,
+    WebDriver, WebElement,
 } from "selenium-webdriver";
 
 import {
@@ -34,7 +34,7 @@ let shorthandInstance: Snappit;
 
 export async function snap(
     name: string,
-    element?: WebElementPromise,
+    element?: WebElement,
 ): Promise<void> {
     if (shorthandInstance) {
         return shorthandInstance.snap(name, element);
@@ -58,7 +58,7 @@ export namespace snap {
 
 export function $(
     selector: string,
-): WebElementPromise {
+): WebElement {
     if (shorthandInstance) {
         return shorthandInstance.$(selector);
     }
@@ -109,7 +109,7 @@ export class Snappit {
 
     public $(
         selector: string,
-    ): WebElementPromise {
+    ): WebElement {
         return this.driver.findElement(By.css(selector));
     }
 
@@ -126,7 +126,7 @@ export class Snappit {
 
     public async snap(
         name: string,
-        element?: WebElementPromise,
+        element?: WebElement,
     ): Promise<void> {
         const filePath = await Screenshot.buildPath(name, this.driver, this.config.screenshotsDir);
         const newShot = await Screenshot.take(this.driver, element);
