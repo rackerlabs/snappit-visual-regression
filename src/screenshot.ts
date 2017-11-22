@@ -67,9 +67,11 @@ class ElementScreenshotter {
         });
 
         const ss = async () => PNG.sync.read(new Buffer(await this.driver.takeScreenshot(), "base64"));
+        const scrollPositionX = async () => (await this.driver.executeScript("return window.pageXOffset;")) as number;
+        const scrollPositionY = async () => (await this.driver.executeScript("return window.pageYOffset;")) as number;
         const takeAlongTotalWidth = async () => {
-            const minX = Math.min(viewport.width, size.width - x);
-            const minY = Math.min(viewport.height, size.height - y);
+            const minX = Math.min(viewport.width, size.width);
+            const minY = Math.min(viewport.height, size.height);
             const fullScreenshotsLengthwise = [...Array(screenshotsLengthwise).keys()].reverse();
             for (const widthShotsRemaining of fullScreenshotsLengthwise) {
                 await this.driver.executeScript(`window.scroll(${x}, ${y})`);
@@ -105,9 +107,12 @@ class ElementScreenshotter {
         };
 
         if (screenshotsLengthwise === 0 && screenshotsHeightwise === 0) {
+            await this.driver.executeScript(`window.scroll(${x}, ${y})`);
+            const rootX = loc.x - await scrollPositionX();
+            const rootY = loc.y - await scrollPositionY();
             PNG.bitblt(
                 await ss(), elementScreenshot,
-                loc.x * devicePixelRatio, loc.y * devicePixelRatio,
+                rootX * devicePixelRatio, rootY * devicePixelRatio,
                 size.width * devicePixelRatio, size.height * devicePixelRatio,
                 0, 0,
             );
