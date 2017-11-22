@@ -94,8 +94,8 @@ class ElementScreenshotter {
             width: size.width * devicePixelRatio,
         });
 
+        const ss = async () => PNG.sync.read(new Buffer(await this.driver.takeScreenshot(), "base64"));
         const takeAlongTotalWidth = async () => {
-            const ss = async () => PNG.sync.read(new Buffer(await this.driver.takeScreenshot(), "base64"));
             const minX = Math.min(viewport.width, size.width - x);
             const minY = Math.min(viewport.height, size.height - y);
             const fullScreenshotsLengthwise = [...Array(screenshotsLengthwise).keys()].reverse();
@@ -132,25 +132,35 @@ class ElementScreenshotter {
             await this.driver.executeScript(`window.scroll(${x}, ${y})`);
         };
 
-        await this.driver.executeScript(DROP_SCROLLBARS);
-        const fullScreenshotsHeightwise = [...Array(screenshotsHeightwise).keys()].reverse();
-        for (const heightShotsRemaining of fullScreenshotsHeightwise) {
-            await takeAlongTotalWidth();
+        if (screenshotsLengthwise === 0 && screenshotsHeightwise === 0) {
+            PNG.bitblt(
+                await ss(), elementScreenshot,
+                loc.x * devicePixelRatio, loc.y * devicePixelRatio,
+                size.width * devicePixelRatio, size.height * devicePixelRatio,
+                0, 0,
+            );
+        } else {
+            await this.driver.executeScript(DROP_SCROLLBARS);
+            const fullScreenshotsHeightwise = [...Array(screenshotsHeightwise).keys()].reverse();
+            for (const heightShotsRemaining of fullScreenshotsHeightwise) {
+                await takeAlongTotalWidth();
 
-            if (heightShotsRemaining) {
-                y += viewport.height;
+                if (heightShotsRemaining) {
+                    y += viewport.height;
+                }
             }
+
+            if (leftoverHeightwise) {
+                if (screenshotsHeightwise) {
+                    y += leftoverHeightwise;
+                }
+
+                await takeAlongTotalWidth();
+            }
+
+            await this.driver.executeScript(REMOVE_DROP_SCROLLBARS);
         }
 
-        if (leftoverHeightwise) {
-            if (screenshotsHeightwise) {
-                y += leftoverHeightwise;
-            }
-
-            await takeAlongTotalWidth();
-        }
-
-        await this.driver.executeScript(REMOVE_DROP_SCROLLBARS);
         return elementScreenshot;
     }
 }
