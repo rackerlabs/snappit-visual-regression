@@ -3,7 +3,7 @@ import * as _ from "lodash";
 import * as path from "path";
 import {PNG} from "pngjs";
 import {
-    By, error as WebDriverError, ThenableWebDriver,
+    By, error as WebDriverError,
     WebDriver, WebElement, WebElementPromise,
 } from "selenium-webdriver";
 
@@ -68,11 +68,11 @@ export function $(
 
 export class Snappit {
     private config: IConfig;
-    private driver: ThenableWebDriver;
+    private driver: WebDriver;
 
     constructor(
         config: IConfig,
-        driver?: ThenableWebDriver,
+        driver?: WebDriver,
     ) {
         if (driver instanceof WebDriver) {
             config.useProvidedDriver = true;
@@ -82,7 +82,7 @@ export class Snappit {
         // Update the global selector function
     }
 
-    public start(): ThenableWebDriver {
+    public start(): WebDriver {
         if (!this.driver) {
             this.driver = getDriver(this.config);
         }

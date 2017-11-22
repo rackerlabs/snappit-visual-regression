@@ -7,7 +7,6 @@ import {
     error as WebDriverError,
     ILocation,
     ISize,
-    ThenableWebDriver,
     WebDriver,
     WebElement,
     WebElementPromise,
@@ -145,7 +144,7 @@ export class Screenshot {
      */
     public static async buildPath(
         name: string,
-        driver: ThenableWebDriver,
+        driver: WebDriver,
         screenshotsDir: string,
     ): Promise<string> {
         const capabilities = await driver.getCapabilities();
@@ -166,7 +165,7 @@ export class Screenshot {
      * Screenshot the browser or element.
      */
     public static async take(
-        driver: ThenableWebDriver,
+        driver: WebDriver,
         element?: WebElementPromise,
     ): Promise<Screenshot> {
         let buffer: Buffer | PNG;

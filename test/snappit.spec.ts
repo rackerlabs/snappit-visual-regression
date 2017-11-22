@@ -4,7 +4,7 @@ import {expect} from "chai";
 import * as fs from "fs-extra";
 import * as _ from "lodash";
 import * as path from "path";
-import {By, ISize, ThenableWebDriver, WebDriver, WebElementPromise} from "selenium-webdriver";
+import {By, ISize, WebDriver, WebElementPromise} from "selenium-webdriver";
 
 import {IConfig, ISnappitConfig} from "../src/config";
 
@@ -19,7 +19,7 @@ import {
 import {$, snap, Snappit} from "../src/snappit";
 
 async function resizeViewport(
-    driver: ThenableWebDriver,
+    driver: WebDriver,
     width: number = 1366,
     height: number = 768,
 ): Promise<void> {
@@ -35,7 +35,7 @@ function browserTest(
 ): void {
 
     suiteFn(suiteName, function() {
-        let driver: ThenableWebDriver;
+        let driver: WebDriver;
         let snappit: Snappit;
         this.timeout(15000);
         this.slow(2500);

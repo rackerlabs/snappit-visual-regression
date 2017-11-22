@@ -6,54 +6,15 @@ import * as remote from "selenium-webdriver/remote";
 
 import {IConfig} from "./config";
 
-// Type aliaases for convenience
-type Promise<T> = Webdriver.promise.Promise<T>;
-
 // Utility type for abstracting across Chrome/Firefox.
 interface IBrowserDriver {
     Driver: typeof Webdriver.WebDriver;
     ServiceBuilder: typeof remote.DriverService.Builder;
 }
 
-// Webdriver defines a proxy ThenableWebDriver type, but does not provide a mixin class or factory.
-type Constructor<T> = new(...args: any[]) => T;
-
-function ThenableWebDriver<T extends Constructor<Webdriver.WebDriver>>(
-    Base: T,
-): T {
-    return class extends Base implements Webdriver.ThenableWebDriver {
-        private pd: Promise<Webdriver.WebDriver>;
-
-        constructor(
-            ...args: any[],
-        ) {
-
-            super(...args);
-            this.pd = super.getSession().then((session) => {
-                return new Base(session, ...args.slice(1));
-            });
-        }
-
-        public then<R>(
-            optCallback?: (value: Webdriver.WebDriver) => Promise<R> | R,
-            optErrback?: (error: any) => any,
-        ): Promise<R> {
-
-            return this.pd.then(optCallback, optErrback);
-        }
-
-        public catch<R>(
-            errback: (err: any) => R | Promise<R>,
-        ): Promise<R> {
-
-            return this.pd.then(errback);
-        }
-    };
-}
-
 export function getDriver(
     config: IConfig,
-): Webdriver.ThenableWebDriver {
+): Webdriver.WebDriver {
     const builder = new Webdriver.Builder()
         .usingServer(config.serverUrl)
         .forBrowser(config.browser);
@@ -75,5 +36,5 @@ export function getDriver(
         }
     }
 
-    return builder.build();
+    return builder.build() as Webdriver.WebDriver;
 }
