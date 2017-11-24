@@ -79,7 +79,6 @@ export class Snappit {
         }
 
         this.config = prepareConfig(config);
-        // Update the global selector function
     }
 
     public start(): WebDriver {
@@ -129,6 +128,7 @@ export class Snappit {
         element?: WebElement,
     ): Promise<void> {
         const filePath = await Screenshot.buildPath(name, this.driver, this.config.screenshotsDir);
+        const shortPath = path.relative(process.cwd(), filePath);
         const newShot = await Screenshot.take(this.driver, element);
 
         // Baseline image exists
@@ -138,18 +138,18 @@ export class Snappit {
 
             if (!newShot.isSameSize(oldShot)) {
                 newShot.saveToPath(filePath);
-                this.handleException(new ScreenshotSizeDifferenceException(filePath));
+                this.handleException(new ScreenshotSizeDifferenceException(shortPath));
             } else if (diff > this.config.threshold) {
-                const prettyDiff = (diff * 100).toFixed(2) + "%";
-                const message = `Screenshots do not match within threshold. ${prettyDiff} difference.`;
+                const prettyDiff = `${(diff * 100).toFixed(2)}% / ${(this.config.threshold * 100).toFixed(2)}%`;
+                const message = `${shortPath} (${prettyDiff})`;
                 newShot.saveToPath(filePath);
-                this.handleException(new ScreenshotMismatchException(filePath));
+                this.handleException(new ScreenshotMismatchException(message));
             }
 
         // No baseline image
         } else {
             newShot.saveToPath(filePath);
-            this.handleException(new ScreenshotNoBaselineException(filePath));
+            this.handleException(new ScreenshotNoBaselineException(shortPath));
         }
     }
 
