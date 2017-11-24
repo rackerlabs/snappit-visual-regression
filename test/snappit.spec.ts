@@ -18,14 +18,6 @@ import {
 } from "../src/errors";
 import {$, snap, Snappit} from "../src/snappit";
 
-async function resizeViewport(
-    driver: WebDriver,
-    width: number = 1366,
-    height: number = 768,
-): Promise<void> {
-    await driver.manage().window().setSize(width, height);
-}
-
 type ISuiteFn = typeof describe | typeof describe.only | typeof describe.skip;
 
 function browserTest(
