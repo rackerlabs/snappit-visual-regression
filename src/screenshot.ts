@@ -11,136 +11,7 @@ import {
     WebElement,
 } from "selenium-webdriver";
 
-const SVR_ID = "added-by-snappit-visual-regression";
-const DROP_SCROLLBARS = `
-var head = document.querySelector("head");
-var style = document.createElement("style");
-style.id = "${SVR_ID}";
-style.type = "text/css";
-style.innerText = "::-webkit-scrollbar { display: none; }"
-head.appendChild(style);
-`;
-
-const REMOVE_DROP_SCROLLBARS = `
-document.querySelector('#${SVR_ID}').remove();
-`;
-
-class ElementScreenshotter {
-    private driver: WebDriver;
-    private element: WebElement;
-
-    constructor(
-        driver: WebDriver,
-        element: WebElement,
-    ) {
-        this.driver = driver;
-        this.element = element;
-    }
-
-    public async take() {
-        const firefoxHeadless = (await this.driver.getCapabilities()).get("moz:headless");
-        const devicePixelRatio = (await this.driver.executeScript("return window.devicePixelRatio") as number);
-        const viewport: ISize = {
-            height: (await this.driver.executeScript("return window.innerHeight")) as number,
-            width: (await this.driver.executeScript("return window.innerWidth")) as number,
-        };
-
-        if (firefoxHeadless) {
-            const OFFSET = 15; // pixels
-            viewport.height = viewport.height -= OFFSET;
-            viewport.width = viewport.width -= OFFSET;
-        }
-
-        const size = await this.element.getSize();
-        const loc = await this.element.getLocation();
-
-        const screenshotsLengthwise = Math.floor(size.width / viewport.width);
-        const screenshotsHeightwise = Math.floor(size.height / viewport.height);
-        const leftoverLengthwise = size.width % viewport.width;
-        const leftoverHeightwise = size.height % viewport.height;
-
-        let x = loc.x;
-        let y = loc.y;
-        const elementScreenshot = new PNG({
-            height: size.height * devicePixelRatio,
-            width: size.width * devicePixelRatio,
-        });
-
-        const ss = async () => PNG.sync.read(new Buffer(await this.driver.takeScreenshot(), "base64"));
-        const scrollPositionX = async () => (await this.driver.executeScript("return window.pageXOffset;")) as number;
-        const scrollPositionY = async () => (await this.driver.executeScript("return window.pageYOffset;")) as number;
-        const takeAlongTotalWidth = async () => {
-            const minX = Math.min(viewport.width, size.width);
-            const minY = Math.min(viewport.height, size.height);
-            const fullScreenshotsLengthwise = [...Array(screenshotsLengthwise).keys()].reverse();
-            for (const widthShotsRemaining of fullScreenshotsLengthwise) {
-                await this.driver.executeScript(`window.scroll(${x}, ${y})`);
-                PNG.bitblt(
-                    await ss(), elementScreenshot,
-                    0, 0,
-                    minX * devicePixelRatio, minY * devicePixelRatio,
-                    (x - loc.x) * devicePixelRatio, (y - loc.y) * devicePixelRatio,
-                );
-
-                if (widthShotsRemaining) {
-                    x += viewport.width;
-                }
-            }
-
-            if (leftoverLengthwise) {
-                if (screenshotsLengthwise) {
-                    x += leftoverLengthwise;
-                }
-
-                await this.driver.executeScript(`window.scroll(${x}, ${y})`);
-                PNG.bitblt(
-                    await ss(), elementScreenshot,
-                    0, 0,
-                    minX * devicePixelRatio, minY * devicePixelRatio,
-                    (x - loc.x) * devicePixelRatio, (y - loc.y) * devicePixelRatio,
-                );
-            }
-
-            // reset back to the left-side of the element
-            x = loc.x;
-            await this.driver.executeScript(`window.scroll(${x}, ${y})`);
-        };
-
-        if (screenshotsLengthwise === 0 && screenshotsHeightwise === 0) {
-            await this.driver.executeScript(`window.scroll(${x}, ${y})`);
-            const rootX = loc.x - await scrollPositionX();
-            const rootY = loc.y - await scrollPositionY();
-            PNG.bitblt(
-                await ss(), elementScreenshot,
-                rootX * devicePixelRatio, rootY * devicePixelRatio,
-                size.width * devicePixelRatio, size.height * devicePixelRatio,
-                0, 0,
-            );
-        } else {
-            await this.driver.executeScript(DROP_SCROLLBARS);
-            const fullScreenshotsHeightwise = [...Array(screenshotsHeightwise).keys()].reverse();
-            for (const heightShotsRemaining of fullScreenshotsHeightwise) {
-                await takeAlongTotalWidth();
-
-                if (heightShotsRemaining) {
-                    y += viewport.height;
-                }
-            }
-
-            if (leftoverHeightwise) {
-                if (screenshotsHeightwise) {
-                    y += leftoverHeightwise;
-                }
-
-                await takeAlongTotalWidth();
-            }
-
-            await this.driver.executeScript(REMOVE_DROP_SCROLLBARS);
-        }
-
-        return elementScreenshot;
-    }
-}
+import * as elementScreenshot from "./elementScreenshot";
 
 export class Screenshot {
     /**
@@ -172,16 +43,11 @@ export class Screenshot {
         driver: WebDriver,
         element?: WebElement,
     ): Promise<Screenshot> {
-        let buffer: Buffer | PNG;
         if (element) {
-            const elementSnap = new ElementScreenshotter(driver, element);
-            buffer = await elementSnap.take();
+            return new Screenshot(await elementScreenshot.take(driver, element));
         } else {
-            buffer = new Buffer(await driver.takeScreenshot(), "base64");
+            return new Screenshot(new Buffer(await driver.takeScreenshot(), "base64"));
         }
-
-        const screenshot = new Screenshot(buffer);
-        return screenshot;
     }
 
     /*
