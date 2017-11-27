@@ -55,7 +55,7 @@ function browserTest(
         describe("driver initialization", () => {
             it("should create a driver instance", async () => {
                 // Snappit will throw if there is a problem in driver creation.
-                driver = snappit.start();
+                driver = await snappit.start();
                 await driver;
             });
 
@@ -93,7 +93,7 @@ function browserTest(
             before(async () => {
                 config.logException = [ScreenshotExceptionName.NO_BASELINE];
                 snappit = new Snappit(config);
-                driver = snappit.start();
+                driver = await snappit.start();
                 await driver.get("http://localhost:8080/");
                 devicePixelRatio = await driver.executeScript("return window.devicePixelRatio") as number;
             });
@@ -185,7 +185,7 @@ function browserTest(
             before(async () => {
                 config.logException = [ScreenshotExceptionName.NO_BASELINE];
                 snappit = new Snappit(config);
-                driver = snappit.start();
+                driver = await snappit.start();
                 await driver.get("http://localhost:8080/blackout-elements");
                 previousHtml = await driver.executeScript(getOuterHtml, $("#blackout")) as string;
                 previousHead = await driver.executeScript(getOuterHtml, $("head")) as string;
@@ -221,9 +221,56 @@ function browserTest(
 
         });
 
+        if (config.headless) {
+            const defaultWidth = config.browser === "chrome" ? 800 : 1366;
+            const defaultHeight = config.browser === "chrome" ? 600 : 768;
+            const width = 1200;
+            const height = 900;
+
+            describe("omitting headless browser size", async () => {
+                before(async () => {
+                    driver = await snappit.start();
+                    await driver.get("http://localhost:8080/");
+                });
+
+                after(async () => {
+                    await snappit.stop();
+                });
+
+                it("should set the viewport size to the default width", async () => {
+                    expect((await driver.manage().window().getSize()).width).to.equal(defaultWidth);
+                });
+
+                it("should set the viewport size to the default height", async () => {
+                    expect((await driver.manage().window().getSize()).height).to.equal(defaultHeight);
+                });
+            });
+
+            describe("when setting headless browser size", async () => {
+                before(async () => {
+                    config.initialViewportSize = [width, height];
+                    snappit = new Snappit(config);
+                    driver = await snappit.start();
+                    await driver.get("http://localhost:8080/");
+                });
+
+                after(async () => {
+                    await snappit.stop();
+                });
+
+                it("should set the viewport size to the desired width", async () => {
+                    expect((await driver.manage().window().getSize()).width).to.equal(width);
+                });
+
+                it("should set the viewport size to the desired height", async () => {
+                    expect((await driver.manage().window().getSize()).height).to.equal(height);
+                });
+            });
+        }
+
         describe("re-configuration", () => {
             before(async () => {
-                driver = snappit.start();
+                driver = await snappit.start();
                 await driver.get("http://localhost:8080/");
             });
 
