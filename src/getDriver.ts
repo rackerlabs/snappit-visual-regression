@@ -6,12 +6,6 @@ import * as remote from "selenium-webdriver/remote";
 
 import {IConfig} from "./config";
 
-// Utility type for abstracting across Chrome/Firefox.
-interface IBrowserDriver {
-    Driver: typeof Webdriver.WebDriver;
-    ServiceBuilder: typeof remote.DriverService.Builder;
-}
-
 export function getDriver(
     config: IConfig,
 ): Webdriver.WebDriver {
