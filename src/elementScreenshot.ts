@@ -73,6 +73,11 @@ class ElementScreenshot {
             width: this.size.width * this.devicePixelRatio,
         });
 
+        console.log("device pixel ratio:", this.devicePixelRatio);
+        console.log("element size:", this.size.width, "x", this.size.height);
+        console.log("viewport size:", this.viewport.width, "x", this.viewport.height);
+        console.log("screenshot size:", this.elementScreenshot.width, "x", this.elementScreenshot.height);
+
         return this;
     }
 
@@ -128,6 +133,9 @@ class ElementScreenshot {
 
         for (const widthShotsRemaining of fullScreenshotsLengthwise) {
             await this.scroll();
+            const ss = await this.ss();
+            console.log("current screenshot size:", ss.width, ss.height);
+            console.log(`png0: (0, 0) - (${minX}, ${minY}) -> (${this.x - this.loc.x}, ${this.y - this.loc.y})`);
             PNG.bitblt(
                 await this.ss(), this.elementScreenshot,
                 0, 0,
@@ -146,6 +154,9 @@ class ElementScreenshot {
             }
 
             await this.scroll();
+            const ss1 = await this.ss();
+            console.log("current screenshot size:", ss1.width, ss1.height);
+            console.log(`png1: (0, 0) - (${minX}, ${minY}) -> (${this.x - this.loc.x}, ${this.y - this.loc.y})`);
             PNG.bitblt(
                 await this.ss(), this.elementScreenshot,
                 0, 0,
