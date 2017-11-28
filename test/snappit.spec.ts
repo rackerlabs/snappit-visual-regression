@@ -4,6 +4,7 @@ import {expect} from "chai";
 import * as fs from "fs-extra";
 import * as _ from "lodash";
 import * as path from "path";
+import {PNG} from "pngjs";
 import {By, ISize, WebDriver, WebElementPromise} from "selenium-webdriver";
 
 import {IConfig, ISnappitConfig} from "../src/config";
@@ -87,9 +88,12 @@ function browserTest(
         });
 
         describe("screenshots", () => {
+            let devicePixelRatio: number;
+
             before(async () => {
                 driver = snappit.start();
                 await driver.get("http://localhost:8080/");
+                devicePixelRatio = await driver.executeScript("return window.devicePixelRatio") as number;
             });
 
             after(async () => {
@@ -127,7 +131,16 @@ function browserTest(
 
             it("should take a snapshot of an element that is too wide", async () => {
                 await driver.get("http://localhost:8080/too-wide");
-                await snap("too-wide.png", $("#too-wide")).catch((err) => err);
+                const imageName = "too-wide.png";
+                const originalImageLocation = `./test/public/img/${imageName}`;
+                const savedImageLocation = `./test/screenshots/${suiteName.split(" ").join("-")}/${imageName}`;
+
+                await snap(imageName, $("#too-wide")).catch((err) => err);
+                const originalPng = PNG.sync.read(fs.readFileSync(originalImageLocation));
+                const savedPng = PNG.sync.read(fs.readFileSync(savedImageLocation));
+
+                expect(originalPng.width * devicePixelRatio).to.eql(savedPng.width);
+                expect(originalPng.height * devicePixelRatio).to.eql(savedPng.height);
             });
 
             it("should take a snapshot of an element that is too tall", async () => {
@@ -137,7 +150,16 @@ function browserTest(
 
             it("should take a snapshot of an element that is too wide and too tall", async () => {
                 await driver.get("http://localhost:8080/too-wide-too-tall");
+                const imageName = "too-wide-too-tall.png";
+                const originalImageLocation = `./test/public/img/${imageName}`;
+                const savedImageLocation = `./test/screenshots/${suiteName.split(" ").join("-")}/${imageName}`;
+
                 await snap("too-wide-too-tall.png", $("#too-wide-too-tall")).catch((err) => err);
+                const originalPng = PNG.sync.read(fs.readFileSync(originalImageLocation));
+                const savedPng = PNG.sync.read(fs.readFileSync(savedImageLocation));
+
+                expect(originalPng.width * devicePixelRatio).to.eql(savedPng.width);
+                expect(originalPng.height * devicePixelRatio).to.eql(savedPng.height);
             });
 
         });
