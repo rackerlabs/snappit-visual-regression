@@ -154,7 +154,7 @@ function browserTest(
                 const originalImageLocation = `./test/public/img/${imageName}`;
                 const savedImageLocation = `./test/screenshots/${suiteName.split(" ").join("-")}/${imageName}`;
 
-                await snap("too-wide-too-tall.png", $("#too-wide-too-tall")).catch((err) => err);
+                await snap(imageName, $("#too-wide-too-tall")); // .catch((err) => err);
                 const originalPng = PNG.sync.read(fs.readFileSync(originalImageLocation));
                 const savedPng = PNG.sync.read(fs.readFileSync(savedImageLocation));
 
