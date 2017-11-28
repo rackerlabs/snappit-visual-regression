@@ -156,6 +156,6 @@ export class Snappit {
     public configureSnap(
         config: ISnappitConfig,
     ): void {
-        this.config = prepareConfig(_.defaults(config, _.cloneDeep(this.config)));
+        this.config = prepareConfig(_.defaults(_.cloneDeep(config), this.config));
     }
 }
