@@ -91,6 +91,8 @@ function browserTest(
             let devicePixelRatio: number;
 
             before(async () => {
+                config.logException = [ScreenshotExceptionName.NO_BASELINE];
+                snappit = new Snappit(config);
                 driver = snappit.start();
                 await driver.get("http://localhost:8080/");
                 devicePixelRatio = await driver.executeScript("return window.devicePixelRatio") as number;
@@ -101,31 +103,31 @@ function browserTest(
             });
 
             it("should throw an error if the screenshot does not exist", async () => {
-                const error = await snap("does-not-exist.png", $("#color-div")).catch((err) => err);
+                const error = await snap("does-not-exist.png", $("#color-div"));
                 expect(error).to.be.an.instanceof(ScreenshotNoBaselineException);
             });
 
             it("should throw an error if the screenshot is a different size", async () => {
-                await snap("different-size.png", $("body")).catch((err) => err);
+                await snap("different-size.png", $("body"));
                 const error = await snap("different-size.png", $("#color-div")).catch((err) => err);
                 expect(error).to.be.an.instanceof(ScreenshotSizeDifferenceException);
             });
 
             it("should throw an error if the screenshot is different above threshold", async () => {
-                await snap("different-above-threshold.png", $("#color-div")).catch((err) => err);
+                await snap("different-above-threshold.png", $("#color-div"));
                 $("#toggle-button").click();
                 const error = await snap("different-above-threshold.png", $("#color-div")).catch((err) => err);
                 expect(error).to.be.an.instanceof(ScreenshotMismatchException);
             });
 
             it("should not throw an error if the screenshot is different below threshold", async () => {
-                await snap("different-below-threshold.png", $("#color-div")).catch((err) => err);
+                await snap("different-below-threshold.png", $("#color-div"));
                 $("#border-button").click();
                 await snap("different-below-threshold.png", $("#color-div"));
             });
 
             it("should not throw an error if the screenshot shows no difference", async () => {
-                await snap("no-difference.png", $("#color-div")).catch((err) => err);
+                await snap("no-difference.png", $("#color-div"));
                 await snap("no-difference.png", $("#color-div"));
             });
 
@@ -135,7 +137,7 @@ function browserTest(
                 const originalImageLocation = `./test/public/img/${imageName}`;
                 const savedImageLocation = `./test/screenshots/${suiteName.split(" ").join("-")}/${imageName}`;
 
-                await snap(imageName, $("#too-wide")).catch((err) => err);
+                await snap(imageName, $("#too-wide"));
                 const originalPng = PNG.sync.read(fs.readFileSync(originalImageLocation));
                 const savedPng = PNG.sync.read(fs.readFileSync(savedImageLocation));
 
@@ -145,7 +147,7 @@ function browserTest(
 
             it("should take a snapshot of an element that is too tall", async () => {
                 await driver.get("http://localhost:8080/too-tall");
-                await snap("too-tall.png", $("#too-tall")).catch((err) => err);
+                await snap("too-tall.png", $("#too-tall"));
             });
 
             it.only("should take a snapshot of an element that is too wide and too tall", async () => {
@@ -154,7 +156,7 @@ function browserTest(
                 const originalImageLocation = `./test/public/img/${imageName}`;
                 const savedImageLocation = `./test/screenshots/${suiteName.split(" ").join("-")}/${imageName}`;
 
-                await snap(imageName, $("#too-wide-too-tall")); // .catch((err) => err);
+                await snap(imageName, $("#too-wide-too-tall"));
                 const originalPng = PNG.sync.read(fs.readFileSync(originalImageLocation));
                 const savedPng = PNG.sync.read(fs.readFileSync(savedImageLocation));
 
