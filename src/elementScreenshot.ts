@@ -52,7 +52,7 @@ class ElementScreenshot {
         };
 
         const firefoxHeadless = (await this.driver.getCapabilities()).get("moz:headless");
-        if (firefoxHeadless) {
+        if (firefoxHeadless || process.env.TRAVIS) {
             // I think this is used because FF headless doesn't consider scrollbars as part of the viewport...?
             const OFFSET = 15; // pixels
             this.viewport.height = this.viewport.height -= OFFSET;
