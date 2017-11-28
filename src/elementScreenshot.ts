@@ -46,17 +46,27 @@ class ElementScreenshot {
      */
     public async prepare() {
         this.devicePixelRatio = (await this.driver.executeScript("return window.devicePixelRatio")) as number;
-        this.viewport = {
-            height: (await this.driver.executeScript("return window.innerHeight")) as number,
-            width: (await this.driver.executeScript("return window.innerWidth")) as number,
-        };
 
-        const firefoxHeadless = (await this.driver.getCapabilities()).get("moz:headless");
-        if (firefoxHeadless || process.env.TRAVIS) {
-            // I think this is used because FF headless doesn't consider scrollbars as part of the viewport...?
-            const OFFSET = 15; // pixels
-            this.viewport.height = this.viewport.height -= OFFSET;
-            this.viewport.width = this.viewport.width -= OFFSET;
+        if (process.env.CI) {
+            const measurementScreenshot = await this.ss();
+            this.viewport = {
+                height: measurementScreenshot.height,
+                width: measurementScreenshot.width,
+            };
+
+        } else {
+            this.viewport = {
+                height: (await this.driver.executeScript("return window.innerHeight")) as number,
+                width: (await this.driver.executeScript("return window.innerWidth")) as number,
+            };
+
+            const firefoxHeadless = (await this.driver.getCapabilities()).get("moz:headless");
+            if (firefoxHeadless) {
+                // I think this is used because FF headless doesn't consider scrollbars as part of the viewport...?
+                const OFFSET = 15; // pixels
+                this.viewport.height = this.viewport.height -= OFFSET;
+                this.viewport.width = this.viewport.width -= OFFSET;
+            }
         }
 
         this.size = await this.element.getSize();
