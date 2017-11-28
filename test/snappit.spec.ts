@@ -103,7 +103,9 @@ function browserTest(
             });
 
             it("should throw an error if the screenshot does not exist", async () => {
-                const error = await snap("does-not-exist.png", $("#color-div"));
+                snap.configure({ logException: [] });
+                const error = await snap("does-not-exist.png", $("#color-div")).catch((err) => err);
+                snap.configure({ logException: [ScreenshotExceptionName.NO_BASELINE] });
                 expect(error).to.be.an.instanceof(ScreenshotNoBaselineException);
             });
 
@@ -150,7 +152,7 @@ function browserTest(
                 await snap("too-tall.png", $("#too-tall"));
             });
 
-            it.only("should take a snapshot of an element that is too wide and too tall", async () => {
+            it("should take a snapshot of an element that is too wide and too tall", async () => {
                 await driver.get("http://localhost:8080/too-wide-too-tall");
                 const imageName = "too-wide-too-tall.png";
                 const originalImageLocation = `./test/public/img/${imageName}`;
@@ -249,18 +251,18 @@ namespace browserTest {
 }
 
 describe("Snappit", () => {
-    // browserTest("Chrome", {
-    //     browser: "chrome",
-    // });
+    browserTest("Chrome", {
+        browser: "chrome",
+    });
 
     browserTest("GeckoDriver FireFox", {
         browser: "firefox",
     });
 
-    // browserTest("Chrome Headless", {
-    //     browser: "chrome",
-    //     headless: true,
-    // });
+    browserTest("Chrome Headless", {
+        browser: "chrome",
+        headless: true,
+    });
 
     browserTest("GeckoDriver FireFox Headless", {
         browser: "firefox",
