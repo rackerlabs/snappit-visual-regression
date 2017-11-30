@@ -11,7 +11,7 @@ import {
     WebElement,
 } from "selenium-webdriver";
 
-import * as elementScreenshot from "./elementScreenshot";
+import elementScreenshot from "./elementScreenshot";
 
 export class Screenshot {
     /**
@@ -44,7 +44,7 @@ export class Screenshot {
         element?: WebElement,
     ): Promise<Screenshot> {
         if (element) {
-            return new Screenshot(await elementScreenshot.take(driver, element));
+            return new Screenshot(await elementScreenshot(driver, element));
         } else {
             return new Screenshot(new Buffer(await driver.takeScreenshot(), "base64"));
         }

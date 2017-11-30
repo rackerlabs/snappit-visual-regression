@@ -173,6 +173,6 @@ class ElementScreenshot {
 
 }
 
-export async function take(driver: WebDriver, element: WebElement) {
+export default async function(driver: WebDriver, element: WebElement) {
     return (await new ElementScreenshot(driver, element).prepare()).take();
 }
