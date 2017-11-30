@@ -149,7 +149,16 @@ function browserTest(
 
             it("should take a snapshot of an element that is too tall", async () => {
                 await driver.get("http://localhost:8080/too-tall");
-                await snap("too-tall.png", $("#too-tall"));
+                const imageName = "too-tall.png";
+                const originalImageLocation = `./test/public/img/${imageName}`;
+                const savedImageLocation = `./test/screenshots/${suiteName.split(" ").join("-")}/${imageName}`;
+
+                await snap(imageName, $("#too-tall"));
+                const originalPng = PNG.sync.read(fs.readFileSync(originalImageLocation));
+                const savedPng = PNG.sync.read(fs.readFileSync(savedImageLocation));
+
+                expect(originalPng.width * devicePixelRatio).to.eql(savedPng.width);
+                expect(originalPng.height * devicePixelRatio).to.eql(savedPng.height);
             });
 
             it("should take a snapshot of an element that is too wide and too tall", async () => {
