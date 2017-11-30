@@ -48,6 +48,12 @@ class ElementScreenshot {
         this.devicePixelRatio = (await this.driver.executeScript("return window.devicePixelRatio")) as number;
 
         if (process.env.CI) {
+            /*
+             * You can't trust the viewport size via javascript (at least in travis, anyway). Last I checked, the
+             * reported size of the viewport was one pixel smaller than the one reported by the width and height
+             * of the screenshot taken of the full window. Since the screenshot reports the correct "viewport"
+             * size for our use case, it is used as the "official" measurement.
+             */
             const measurementScreenshot = await this.ss();
             this.viewport = {
                 height: measurementScreenshot.height,
