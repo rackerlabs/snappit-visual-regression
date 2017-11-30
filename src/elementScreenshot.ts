@@ -24,11 +24,11 @@ class ElementScreenshot {
     private devicePixelRatio: number;
     private driver: WebDriver;
     private element: WebElement;
+    private elementLoc: ILocation;
     private elementScreenshot: PNG; // final result
-    private loc: ILocation; // element location
+    private elementSize: ISize;
     private screenshotsHeightwise: number;
     private screenshotsLengthwise: number;
-    private size: ISize; // element size
     private viewport: ISize;
     private x: number; // browser window's current X position
     private y: number; // browser window's current Y position
@@ -69,18 +69,18 @@ class ElementScreenshot {
             }
         }
 
-        this.size = await this.element.getSize();
-        this.loc = await this.element.getLocation();
+        this.elementSize = await this.element.getSize();
+        this.elementLoc = await this.element.getLocation();
 
-        this.screenshotsLengthwise = Math.floor(this.size.width / this.viewport.width);
-        this.screenshotsHeightwise = Math.floor(this.size.height / this.viewport.height);
+        this.screenshotsLengthwise = Math.floor(this.elementSize.width / this.viewport.width);
+        this.screenshotsHeightwise = Math.floor(this.elementSize.height / this.viewport.height);
 
         // these get mutated quite frequently...
-        this.x = this.loc.x;
-        this.y = this.loc.y;
+        this.x = this.elementLoc.x;
+        this.y = this.elementLoc.y;
         this.elementScreenshot = new PNG({
-            height: this.size.height * this.devicePixelRatio,
-            width: this.size.width * this.devicePixelRatio,
+            height: this.elementSize.height * this.devicePixelRatio,
+            width: this.elementSize.width * this.devicePixelRatio,
         });
 
         return this;
@@ -92,18 +92,18 @@ class ElementScreenshot {
             await this.scroll();
             const scrollPositionX = await this.driver.executeScript("return window.pageXOffset;") as number;
             const scrollPositionY = await this.driver.executeScript("return window.pageYOffset;") as number;
-            const rootX = this.loc.x - scrollPositionX;
-            const rootY = this.loc.y - scrollPositionY;
+            const rootX = this.elementLoc.x - scrollPositionX;
+            const rootY = this.elementLoc.y - scrollPositionY;
             // easy enough
             PNG.bitblt(
                 await this.ss(), this.elementScreenshot,
                 rootX * this.devicePixelRatio, rootY * this.devicePixelRatio,
-                this.size.width * this.devicePixelRatio, this.size.height * this.devicePixelRatio,
+                this.elementSize.width * this.devicePixelRatio, this.elementSize.height * this.devicePixelRatio,
                 0, 0,
             );
         } else {
             await this.driver.executeScript(DROP_SCROLLBARS);
-            const leftoverHeightwise = this.size.height % this.viewport.height;
+            const leftoverHeightwise = this.elementSize.height % this.viewport.height;
             const fullScreenshotsHeightwise = [...Array(this.screenshotsHeightwise).keys()].reverse();
 
             for (const heightShotsRemaining of fullScreenshotsHeightwise) {
@@ -131,9 +131,9 @@ class ElementScreenshot {
     private async ss() { return PNG.sync.read(new Buffer(await this.driver.takeScreenshot(), "base64")); }
     private async scroll() { await this.driver.executeScript(`window.scroll(${this.x}, ${this.y})`); }
     private async takeAlongTotalWidth() {
-        const leftoverLengthwise = this.size.width % this.viewport.width;
-        const minX = Math.min(this.viewport.width, this.size.width);
-        const minY = Math.min(this.viewport.height, this.size.height);
+        const leftoverLengthwise = this.elementSize.width % this.viewport.width;
+        const minX = Math.min(this.viewport.width, this.elementSize.width);
+        const minY = Math.min(this.viewport.height, this.elementSize.height);
         const fullScreenshotsLengthwise = [...Array(this.screenshotsLengthwise).keys()].reverse();
 
         for (const widthShotsRemaining of fullScreenshotsLengthwise) {
@@ -143,7 +143,8 @@ class ElementScreenshot {
                 await this.ss(), this.elementScreenshot,
                 0, 0,
                 minX * this.devicePixelRatio, minY * this.devicePixelRatio,
-                (this.x - this.loc.x) * this.devicePixelRatio, (this.y - this.loc.y) * this.devicePixelRatio,
+                (this.x - this.elementLoc.x) * this.devicePixelRatio,
+                (this.y - this.elementLoc.y) * this.devicePixelRatio,
             );
 
             if (widthShotsRemaining) {
@@ -162,12 +163,13 @@ class ElementScreenshot {
                 await this.ss(), this.elementScreenshot,
                 0, 0,
                 minX * this.devicePixelRatio, minY * this.devicePixelRatio,
-                (this.x - this.loc.x) * this.devicePixelRatio, (this.y - this.loc.y) * this.devicePixelRatio,
+                (this.x - this.elementLoc.x) * this.devicePixelRatio,
+                (this.y - this.elementLoc.y) * this.devicePixelRatio,
             );
         }
 
         // reset back to the left-side of the element
-        this.x = this.loc.x;
+        this.x = this.elementLoc.x;
         await this.scroll();
     }
 
