@@ -18,7 +18,7 @@ head.appendChild(style);
 `;
 
 const REMOVE_DROP_SCROLLBARS = `
-document.querySelector('#${SVR_ID}').remove();
+document.getElementById('${SVR_ID}').remove();
 `;
 
 class ElementScreenshot {
@@ -100,6 +100,7 @@ class ElementScreenshot {
             );
         }
 
+        await this.driver.executeScript(REMOVE_DROP_SCROLLBARS);
         return elementScreenshot;
     }
 
@@ -119,20 +120,20 @@ class ElementScreenshot {
 
     private async populateScreenshotCoordinates() {
         const coordinatesToScreenshotAt: ILocation[] = [];
-        const numberOfHorizontalScreenshots = Math.floor(this.elementSize.width / this.viewport.width) || 1;
-        const numberOfVerticalScreenshots = Math.floor(this.elementSize.height / this.viewport.height) || 1;
+        const numberOfHorizontalScreenshots = Math.floor(this.elementSize.width / this.viewport.width);
+        const numberOfVerticalScreenshots = Math.floor(this.elementSize.height / this.viewport.height);
         const extraHorizontalScreenshot = this.elementSize.width % this.viewport.width;
         const extraVerticalScreenshot = this.elementSize.height % this.viewport.height;
 
         let x = this.elementLoc.x;
         let y = this.elementLoc.y;
-        for (const iY of _.range(numberOfVerticalScreenshots).reverse()) {
-            for (const iX of _.range(numberOfHorizontalScreenshots).reverse()) {
+        for (const iY of _.range(numberOfVerticalScreenshots).reverse() && [0]) {
+            for (const iX of _.range(numberOfHorizontalScreenshots).reverse() && [0]) {
                 coordinatesToScreenshotAt.push({ x, y });
                 x += iX ? this.viewport.width : 0;
             }
 
-            if (numberOfHorizontalScreenshots > 1 && extraHorizontalScreenshot) {
+            if (numberOfHorizontalScreenshots && extraHorizontalScreenshot) {
                 x += extraHorizontalScreenshot;
                 coordinatesToScreenshotAt.push({ x, y });
             }
@@ -141,14 +142,14 @@ class ElementScreenshot {
             x = this.elementLoc.x;
         }
 
-        if (numberOfVerticalScreenshots > 1 && extraVerticalScreenshot) {
+        if (numberOfVerticalScreenshots && extraVerticalScreenshot) {
             y += extraVerticalScreenshot;
-            for (const iX of _.range(numberOfHorizontalScreenshots).reverse()) {
+            for (const iX of _.range(numberOfHorizontalScreenshots).reverse() && [0]) {
                 coordinatesToScreenshotAt.push({ x, y });
                 x += iX ? this.viewport.width : 0;
             }
 
-            if (numberOfHorizontalScreenshots > 1 && extraHorizontalScreenshot) {
+            if (numberOfHorizontalScreenshots && extraHorizontalScreenshot) {
                 x += extraHorizontalScreenshot;
                 coordinatesToScreenshotAt.push({ x, y });
             }

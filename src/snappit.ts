@@ -22,6 +22,7 @@ import {
     ScreenshotSizeDifferenceException,
 } from "./errors";
 
+import * as blackout from "./blackout";
 import {getDriver} from "./getDriver";
 import {Screenshot} from "./screenshot";
 
@@ -32,12 +33,19 @@ import {Screenshot} from "./screenshot";
  */
 let shorthandInstance: Snappit;
 
+export interface ISnapOptions {
+    hide?: WebElement[];
+}
+
 export async function snap(
     name: string,
     element?: WebElement,
+    opts: ISnapOptions = {
+        hide: [],
+    },
 ): Promise<void> {
     if (shorthandInstance) {
-        return shorthandInstance.snap(name, element);
+        return shorthandInstance.snap(name, element, opts);
     }
 
     throw new NoDriverSessionException();
@@ -126,10 +134,13 @@ export class Snappit {
     public async snap(
         name: string,
         element?: WebElement,
+        opts?: ISnapOptions,
     ): Promise<void> {
         const filePath = await Screenshot.buildPath(name, this.driver, this.config.screenshotsDir);
         const shortPath = path.relative(process.cwd(), filePath);
+        await blackout.hideElements(this.driver, opts.hide);
         const newShot = await Screenshot.take(this.driver, element);
+        await blackout.unhideElements(this.driver, opts.hide);
 
         // Baseline image exists
         if (fs.existsSync(filePath)) {
