@@ -1,3 +1,4 @@
+import * as _ from "lodash";
 import { PNG } from "pngjs";
 import {
     ILocation,
@@ -21,17 +22,11 @@ document.querySelector('#${SVR_ID}').remove();
 `;
 
 class ElementScreenshot {
-    private devicePixelRatio: number;
     private driver: WebDriver;
     private element: WebElement;
     private elementLoc: ILocation;
-    private elementScreenshot: PNG; // final result
     private elementSize: ISize;
-    private screenshotsHeightwise: number;
-    private screenshotsLengthwise: number;
     private viewport: ISize;
-    private x: number; // browser window's current X position
-    private y: number; // browser window's current Y position
 
     constructor(
         driver: WebDriver,
@@ -45,16 +40,14 @@ class ElementScreenshot {
      * the logic that takes *all* screenshots and the one that takes *the majority* of the screenshots.
      */
     public async prepare() {
-        this.devicePixelRatio = (await this.driver.executeScript("return window.devicePixelRatio")) as number;
-
         if (process.env.CI) {
             /*
-             * You can't trust the viewport size via javascript (at least in travis, anyway). Last I checked, the
+             * You can't trust the viewport size via javascript (at least in travis-ci, anyway). Last I checked, the
              * reported size of the viewport was one pixel smaller than the one reported by the width and height
              * of the screenshot taken of the full window. Since the screenshot reports the correct "viewport"
              * size for our use case, it is used as the "official" measurement.
              */
-            const measurementScreenshot = await this.ss();
+            const measurementScreenshot = await this.screenshot();
             this.viewport = {
                 height: measurementScreenshot.height,
                 width: measurementScreenshot.width,
@@ -77,108 +70,92 @@ class ElementScreenshot {
 
         this.elementSize = await this.element.getSize();
         this.elementLoc = await this.element.getLocation();
-
-        this.screenshotsLengthwise = Math.floor(this.elementSize.width / this.viewport.width);
-        this.screenshotsHeightwise = Math.floor(this.elementSize.height / this.viewport.height);
-
-        // these get mutated quite frequently...
-        this.x = this.elementLoc.x;
-        this.y = this.elementLoc.y;
-        this.elementScreenshot = new PNG({
-            height: this.elementSize.height * this.devicePixelRatio,
-            width: this.elementSize.width * this.devicePixelRatio,
-        });
-
         return this;
     }
 
     public async take() {
-        const singleScreenshotOnly = this.screenshotsLengthwise === 0 && this.screenshotsHeightwise === 0;
-        if (singleScreenshotOnly) {
-            await this.scroll();
-            const scrollPositionX = await this.driver.executeScript("return window.pageXOffset;") as number;
-            const scrollPositionY = await this.driver.executeScript("return window.pageYOffset;") as number;
-            const rootX = this.elementLoc.x - scrollPositionX;
-            const rootY = this.elementLoc.y - scrollPositionY;
-            // easy enough
+        const coordinatesToScreenshotAt = await this.populateScreenshotCoordinates();
+        const devicePixelRatio = (await this.driver.executeScript("return window.devicePixelRatio")) as number;
+        const elementScreenshot = new PNG({
+            height: this.elementSize.height * devicePixelRatio,
+            width: this.elementSize.width * devicePixelRatio,
+        });
+
+        await this.driver.executeScript(DROP_SCROLLBARS);
+        for (const screenshotCoordinate of coordinatesToScreenshotAt) {
+            await this.driver.executeScript(`window.scroll(${screenshotCoordinate.x}, ${screenshotCoordinate.y})`);
+
+            const root = await this.findElementCoordinatesInViewport(screenshotCoordinate);
+            const min: ISize = {
+                height: Math.min(this.viewport.height, this.elementSize.height),
+                width: Math.min(this.viewport.width, this.elementSize.width),
+            };
+
             PNG.bitblt(
-                await this.ss(), this.elementScreenshot,
-                rootX * this.devicePixelRatio, rootY * this.devicePixelRatio,
-                this.elementSize.width * this.devicePixelRatio, this.elementSize.height * this.devicePixelRatio,
-                0, 0,
+                await this.screenshot(), elementScreenshot,
+                root.x * devicePixelRatio, root.y * devicePixelRatio,
+                min.width * devicePixelRatio, min.height * devicePixelRatio,
+                (screenshotCoordinate.x - this.elementLoc.x) * devicePixelRatio,
+                (screenshotCoordinate.y - this.elementLoc.y) * devicePixelRatio,
             );
-        } else {
-            await this.driver.executeScript(DROP_SCROLLBARS);
-            const leftoverHeightwise = this.elementSize.height % this.viewport.height;
-            const fullScreenshotsHeightwise = [...Array(this.screenshotsHeightwise).keys()].reverse();
-
-            for (const heightShotsRemaining of fullScreenshotsHeightwise) {
-                await this.takeAlongTotalWidth();
-
-                if (heightShotsRemaining) {
-                    this.y += this.viewport.height;
-                }
-            }
-
-            if (leftoverHeightwise) {
-                if (this.screenshotsHeightwise) {
-                    this.y += leftoverHeightwise;
-                }
-
-                await this.takeAlongTotalWidth();
-            }
-
-            await this.driver.executeScript(REMOVE_DROP_SCROLLBARS);
         }
 
-        return this.elementScreenshot;
+        return elementScreenshot;
     }
 
-    private async ss() { return PNG.sync.read(new Buffer(await this.driver.takeScreenshot(), "base64")); }
-    private async scroll() { await this.driver.executeScript(`window.scroll(${this.x}, ${this.y})`); }
-    private async takeAlongTotalWidth() {
-        const leftoverLengthwise = this.elementSize.width % this.viewport.width;
-        const minX = Math.min(this.viewport.width, this.elementSize.width);
-        const minY = Math.min(this.viewport.height, this.elementSize.height);
-        const fullScreenshotsLengthwise = [...Array(this.screenshotsLengthwise).keys()].reverse();
-
-        for (const widthShotsRemaining of fullScreenshotsLengthwise) {
-            await this.scroll();
-            const ss = await this.ss();
-            PNG.bitblt(
-                await this.ss(), this.elementScreenshot,
-                0, 0,
-                minX * this.devicePixelRatio, minY * this.devicePixelRatio,
-                (this.x - this.elementLoc.x) * this.devicePixelRatio,
-                (this.y - this.elementLoc.y) * this.devicePixelRatio,
-            );
-
-            if (widthShotsRemaining) {
-                this.x += this.viewport.width;
-            }
-        }
-
-        if (leftoverLengthwise) {
-            if (this.screenshotsLengthwise) {
-                this.x += leftoverLengthwise;
-            }
-
-            await this.scroll();
-            const ss1 = await this.ss();
-            PNG.bitblt(
-                await this.ss(), this.elementScreenshot,
-                0, 0,
-                minX * this.devicePixelRatio, minY * this.devicePixelRatio,
-                (this.x - this.elementLoc.x) * this.devicePixelRatio,
-                (this.y - this.elementLoc.y) * this.devicePixelRatio,
-            );
-        }
-
-        // reset back to the left-side of the element
-        this.x = this.elementLoc.x;
-        await this.scroll();
+    private async screenshot() {
+        return PNG.sync.read(new Buffer(await this.driver.takeScreenshot(), "base64"));
     }
 
+    private async findElementCoordinatesInViewport(
+        screenshotCoordinate: ILocation,
+    ): Promise<ILocation> {
+        const scrollPositionX = await this.driver.executeScript("return window.pageXOffset;") as number;
+        const scrollPositionY = await this.driver.executeScript("return window.pageYOffset;") as number;
+        const rootX = screenshotCoordinate.x - scrollPositionX;
+        const rootY = screenshotCoordinate.y - scrollPositionY;
+        return { x: rootX, y: rootY };
+    }
+
+    private async populateScreenshotCoordinates() {
+        const coordinatesToScreenshotAt: ILocation[] = [];
+        const numberOfHorizontalScreenshots = Math.floor(this.elementSize.width / this.viewport.width) || 1;
+        const numberOfVerticalScreenshots = Math.floor(this.elementSize.height / this.viewport.height) || 1;
+        const extraHorizontalScreenshot = this.elementSize.width % this.viewport.width;
+        const extraVerticalScreenshot = this.elementSize.height % this.viewport.height;
+
+        let x = this.elementLoc.x;
+        let y = this.elementLoc.y;
+        for (const iY of _.range(numberOfVerticalScreenshots).reverse()) {
+            for (const iX of _.range(numberOfHorizontalScreenshots).reverse()) {
+                coordinatesToScreenshotAt.push({ x, y });
+                x += iX ? this.viewport.width : 0;
+            }
+
+            if (numberOfHorizontalScreenshots > 1 && extraHorizontalScreenshot) {
+                x += extraHorizontalScreenshot;
+                coordinatesToScreenshotAt.push({ x, y });
+            }
+
+            y += iY ? this.viewport.height : 0;
+            x = this.elementLoc.x;
+        }
+
+        if (numberOfVerticalScreenshots > 1 && extraVerticalScreenshot) {
+            y += extraVerticalScreenshot;
+            for (const iX of _.range(numberOfHorizontalScreenshots).reverse()) {
+                coordinatesToScreenshotAt.push({ x, y });
+                x += iX ? this.viewport.width : 0;
+            }
+
+            if (numberOfHorizontalScreenshots > 1 && extraHorizontalScreenshot) {
+                x += extraHorizontalScreenshot;
+                coordinatesToScreenshotAt.push({ x, y });
+            }
+        }
+
+        return coordinatesToScreenshotAt;
+    }
 }
 
 export default async function(driver: WebDriver, element: WebElement) {
