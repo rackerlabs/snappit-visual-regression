@@ -127,8 +127,8 @@ class ElementScreenshot {
 
         let x = this.elementLoc.x;
         let y = this.elementLoc.y;
-        for (const iY of _.range(numberOfVerticalScreenshots).reverse() && [0]) {
-            for (const iX of _.range(numberOfHorizontalScreenshots).reverse() && [0]) {
+        for (const iY of _.range(numberOfVerticalScreenshots || 1).reverse()) {
+            for (const iX of _.range(numberOfHorizontalScreenshots || 1).reverse()) {
                 coordinatesToScreenshotAt.push({ x, y });
                 x += iX ? this.viewport.width : 0;
             }
@@ -144,7 +144,7 @@ class ElementScreenshot {
 
         if (numberOfVerticalScreenshots && extraVerticalScreenshot) {
             y += extraVerticalScreenshot;
-            for (const iX of _.range(numberOfHorizontalScreenshots).reverse() && [0]) {
+            for (const iX of _.range(numberOfHorizontalScreenshots || 1).reverse()) {
                 coordinatesToScreenshotAt.push({ x, y });
                 x += iX ? this.viewport.width : 0;
             }
