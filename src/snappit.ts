@@ -3,8 +3,8 @@ import * as _ from "lodash";
 import * as path from "path";
 import {PNG} from "pngjs";
 import {
-    By, error as WebDriverError, ThenableWebDriver,
-    WebDriver, WebElement, WebElementPromise,
+    By, error as WebDriverError,
+    WebDriver, WebElement,
 } from "selenium-webdriver";
 
 import {
@@ -34,7 +34,7 @@ let shorthandInstance: Snappit;
 
 export async function snap(
     name: string,
-    element?: WebElementPromise,
+    element?: WebElement,
 ): Promise<void> {
     if (shorthandInstance) {
         return shorthandInstance.snap(name, element);
@@ -58,7 +58,7 @@ export namespace snap {
 
 export function $(
     selector: string,
-): WebElementPromise {
+): WebElement {
     if (shorthandInstance) {
         return shorthandInstance.$(selector);
     }
@@ -68,21 +68,20 @@ export function $(
 
 export class Snappit {
     private config: IConfig;
-    private driver: ThenableWebDriver;
+    private driver: WebDriver;
 
     constructor(
         config: IConfig,
-        driver?: ThenableWebDriver,
+        driver?: WebDriver,
     ) {
         if (driver instanceof WebDriver) {
             config.useProvidedDriver = true;
         }
 
         this.config = prepareConfig(config);
-        // Update the global selector function
     }
 
-    public start(): ThenableWebDriver {
+    public start(): WebDriver {
         if (!this.driver) {
             this.driver = getDriver(this.config);
         }
@@ -109,7 +108,7 @@ export class Snappit {
 
     public $(
         selector: string,
-    ): WebElementPromise {
+    ): WebElement {
         return this.driver.findElement(By.css(selector));
     }
 
@@ -126,9 +125,10 @@ export class Snappit {
 
     public async snap(
         name: string,
-        element?: WebElementPromise,
+        element?: WebElement,
     ): Promise<void> {
         const filePath = await Screenshot.buildPath(name, this.driver, this.config.screenshotsDir);
+        const shortPath = path.relative(process.cwd(), filePath);
         const newShot = await Screenshot.take(this.driver, element);
 
         // Baseline image exists
@@ -138,24 +138,24 @@ export class Snappit {
 
             if (!newShot.isSameSize(oldShot)) {
                 newShot.saveToPath(filePath);
-                this.handleException(new ScreenshotSizeDifferenceException(filePath));
+                this.handleException(new ScreenshotSizeDifferenceException(shortPath));
             } else if (diff > this.config.threshold) {
-                const prettyDiff = (diff * 100).toFixed(2) + "%";
-                const message = `Screenshots do not match within threshold. ${prettyDiff} difference.`;
+                const prettyDiff = `${(diff * 100).toFixed(2)}% / ${(this.config.threshold * 100).toFixed(2)}%`;
+                const message = `${shortPath} (${prettyDiff})`;
                 newShot.saveToPath(filePath);
-                this.handleException(new ScreenshotMismatchException(filePath));
+                this.handleException(new ScreenshotMismatchException(message));
             }
 
         // No baseline image
         } else {
             newShot.saveToPath(filePath);
-            this.handleException(new ScreenshotNoBaselineException(filePath));
+            this.handleException(new ScreenshotNoBaselineException(shortPath));
         }
     }
 
     public configureSnap(
         config: ISnappitConfig,
     ): void {
-        this.config = prepareConfig(_.merge({}, this.config, config));
+        this.config = prepareConfig(_.defaults(_.cloneDeep(config), this.config));
     }
 }

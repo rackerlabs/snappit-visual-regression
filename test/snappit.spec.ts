@@ -4,7 +4,8 @@ import {expect} from "chai";
 import * as fs from "fs-extra";
 import * as _ from "lodash";
 import * as path from "path";
-import {By, ISize, ThenableWebDriver, WebDriver, WebElementPromise} from "selenium-webdriver";
+import {PNG} from "pngjs";
+import {By, ISize, WebDriver, WebElementPromise} from "selenium-webdriver";
 
 import {IConfig, ISnappitConfig} from "../src/config";
 
@@ -18,14 +19,6 @@ import {
 } from "../src/errors";
 import {$, snap, Snappit} from "../src/snappit";
 
-async function resizeViewport(
-    driver: ThenableWebDriver,
-    width: number = 1366,
-    height: number = 768,
-): Promise<void> {
-    await driver.manage().window().setSize(width, height);
-}
-
 type ISuiteFn = typeof describe | typeof describe.only | typeof describe.skip;
 
 function browserTest(
@@ -35,7 +28,7 @@ function browserTest(
 ): void {
 
     suiteFn(suiteName, function() {
-        let driver: ThenableWebDriver;
+        let driver: WebDriver;
         let snappit: Snappit;
         this.timeout(15000);
         this.slow(2500);
@@ -95,9 +88,14 @@ function browserTest(
         });
 
         describe("screenshots", () => {
+            let devicePixelRatio: number;
+
             before(async () => {
+                config.logException = [ScreenshotExceptionName.NO_BASELINE];
+                snappit = new Snappit(config);
                 driver = snappit.start();
                 await driver.get("http://localhost:8080/");
+                devicePixelRatio = await driver.executeScript("return window.devicePixelRatio") as number;
             });
 
             after(async () => {
@@ -105,40 +103,78 @@ function browserTest(
             });
 
             it("should throw an error if the screenshot does not exist", async () => {
+                snap.configure({ logException: [] });
                 const error = await snap("does-not-exist.png", $("#color-div")).catch((err) => err);
+                snap.configure({ logException: [ScreenshotExceptionName.NO_BASELINE] });
                 expect(error).to.be.an.instanceof(ScreenshotNoBaselineException);
             });
 
             it("should throw an error if the screenshot is a different size", async () => {
-                await snap("different-size.png", $("body")).catch((err) => err);
+                await snap("different-size.png", $("body"));
                 const error = await snap("different-size.png", $("#color-div")).catch((err) => err);
                 expect(error).to.be.an.instanceof(ScreenshotSizeDifferenceException);
             });
 
             it("should throw an error if the screenshot is different above threshold", async () => {
-                await snap("different-above-threshold.png", $("#color-div")).catch((err) => err);
+                await snap("different-above-threshold.png", $("#color-div"));
                 $("#toggle-button").click();
                 const error = await snap("different-above-threshold.png", $("#color-div")).catch((err) => err);
                 expect(error).to.be.an.instanceof(ScreenshotMismatchException);
             });
 
             it("should not throw an error if the screenshot is different below threshold", async () => {
-                await snap("different-below-threshold.png", $("#color-div")).catch((err) => err);
+                await snap("different-below-threshold.png", $("#color-div"));
                 $("#border-button").click();
                 await snap("different-below-threshold.png", $("#color-div"));
             });
 
             it("should not throw an error if the screenshot shows no difference", async () => {
-                await snap("no-difference.png", $("#color-div")).catch((err) => err);
+                await snap("no-difference.png", $("#color-div"));
                 await snap("no-difference.png", $("#color-div"));
             });
 
-            it("should handle an oversized element that is larger than the viewport size", async () => {
-                await snap("chrome-throw-no-oversized-crop.png", $("#color-div")).catch((err) => err);
-                await resizeViewport(driver, 100, 100);
-                await snap("chrome-throw-no-oversized-crop.png", $("#color-div"));
-                await resizeViewport(driver);
+            it("should take a snapshot of an element that is too wide", async () => {
+                await driver.get("http://localhost:8080/too-wide");
+                const imageName = "too-wide.png";
+                const originalImageLocation = `./test/public/img/${imageName}`;
+                const savedImageLocation = `./test/screenshots/${suiteName.split(" ").join("-")}/${imageName}`;
+
+                await snap(imageName, $("#too-wide"));
+                const originalPng = PNG.sync.read(fs.readFileSync(originalImageLocation));
+                const savedPng = PNG.sync.read(fs.readFileSync(savedImageLocation));
+
+                expect(originalPng.width * devicePixelRatio).to.eql(savedPng.width);
+                expect(originalPng.height * devicePixelRatio).to.eql(savedPng.height);
             });
+
+            it("should take a snapshot of an element that is too tall", async () => {
+                await driver.get("http://localhost:8080/too-tall");
+                const imageName = "too-tall.png";
+                const originalImageLocation = `./test/public/img/${imageName}`;
+                const savedImageLocation = `./test/screenshots/${suiteName.split(" ").join("-")}/${imageName}`;
+
+                await snap(imageName, $("#too-tall"));
+                const originalPng = PNG.sync.read(fs.readFileSync(originalImageLocation));
+                const savedPng = PNG.sync.read(fs.readFileSync(savedImageLocation));
+
+                expect(originalPng.width * devicePixelRatio).to.eql(savedPng.width);
+                expect(originalPng.height * devicePixelRatio).to.eql(savedPng.height);
+            });
+
+            it("should take a snapshot of an element that is too wide and too tall", async () => {
+                await driver.get("http://localhost:8080/too-wide-too-tall");
+                const imageName = "too-wide-too-tall.png";
+                const originalImageLocation = `./test/public/img/${imageName}`;
+                const savedImageLocation = `./test/screenshots/${suiteName.split(" ").join("-")}/${imageName}`;
+
+                await snap(imageName, $("#too-wide-too-tall"));
+                const originalPng = PNG.sync.read(fs.readFileSync(originalImageLocation));
+                const savedPng = PNG.sync.read(fs.readFileSync(savedImageLocation));
+
+                expect(originalPng.width * devicePixelRatio).to.eql(savedPng.width);
+                expect(originalPng.height * devicePixelRatio).to.eql(savedPng.height);
+            });
+
         });
 
         describe("re-configuration", () => {

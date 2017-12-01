@@ -7,3 +7,4 @@ export {
     ScreenshotSizeDifferenceException,
 } from "./errors";
 export {IConfig, ISnappitConfig, IConfigPaths} from "./config";
+export * from "selenium-webdriver";

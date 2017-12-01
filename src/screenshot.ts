@@ -3,9 +3,15 @@ import * as path from "path";
 
 import { PNG } from "pngjs";
 import {
-    By, error as WebDriverError, ISize, ThenableWebDriver,
-    WebDriver, WebElement, WebElementPromise,
+    By,
+    error as WebDriverError,
+    ILocation,
+    ISize,
+    WebDriver,
+    WebElement,
 } from "selenium-webdriver";
+
+import elementScreenshot from "./elementScreenshot";
 
 export class Screenshot {
     /**
@@ -13,7 +19,7 @@ export class Screenshot {
      */
     public static async buildPath(
         name: string,
-        driver: ThenableWebDriver,
+        driver: WebDriver,
         screenshotsDir: string,
     ): Promise<string> {
         const capabilities = await driver.getCapabilities();
@@ -34,37 +40,14 @@ export class Screenshot {
      * Screenshot the browser or element.
      */
     public static async take(
-        driver: ThenableWebDriver,
-        element?: WebElementPromise,
+        driver: WebDriver,
+        element?: WebElement,
     ): Promise<Screenshot> {
-        // This handles chrome, firefox headless, because they don't impmlement element.takeScreenshot() yet.
         if (element) {
-            return this.canvasScreenshot(driver, element);
+            return new Screenshot(await elementScreenshot(driver, element));
+        } else {
+            return new Screenshot(new Buffer(await driver.takeScreenshot(), "base64"));
         }
-
-        const buffer = new Buffer(await (element ? element : driver).takeScreenshot(), "base64");
-        const screenshot = new Screenshot(buffer);
-        return screenshot;
-    }
-
-    /**
-     * Generate a screenshot via chrome canvas.
-     * This is a workaround to screenshotting an element in chrome because chromedriver does not
-     * implement WebElement.takeScreenshot
-     */
-    public static async canvasScreenshot(
-        driver: ThenableWebDriver,
-        element: WebElementPromise,
-    ): Promise<Screenshot> {
-        await driver.manage().timeouts().setScriptTimeout(5000);
-        const pngString = await driver.executeAsyncScript(`
-            callback = arguments[arguments.length - 1];
-            ${fs.readFileSync(require.resolve("dom-to-image")).toString()}
-            domtoimage.toPng(arguments[0]).then(callback);
-            `, element) as string;
-        const buffer = new Buffer(pngString.slice("data:image/png;base64,".length), "base64");
-        const screenshot = new Screenshot(buffer);
-        return screenshot;
     }
 
     /*
