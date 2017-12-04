@@ -36,8 +36,7 @@ const BLACKOUT_CSS = `
 
 .${BLACKOUT_TARGET_CLASS} {
   opacity: 0 !important;
-}
-`.split("\n").join(" ");
+}`;
 
 const SVR_ID = "blackout-styles-added-by-snappit-visual-regression";
 const ADD_BLACKOUT_STYLE = `
@@ -45,10 +44,10 @@ var head = document.querySelector("head");
 var style = document.createElement("style");
 style.id = "${SVR_ID}";
 style.type = "text/css";
-style.innerText = "${BLACKOUT_CSS}";
+style.innerText = "${BLACKOUT_CSS.replace(/\n+/g, " ")}";
 
 head.appendChild(style);
-`.split("\n").join(" ");
+`;
 
 const REMOVE_BLACKOUT_STYLE = `document.getElementById("${SVR_ID}").remove();`;
 
@@ -63,7 +62,7 @@ var backdrop = document.createElement("div");
 backdrop.classList.add("${BLACKOUT_BACKDROP_CLASS}");
 arguments[0].parentElement.appendChild(backdrop);
 backdrop.appendChild(arguments[0]);
-`.split("\n").join(" ");
+`;
 
 const REMOVE_BLACKOUT_BACKDROP = `
 arguments[0].classList.remove("${BLACKOUT_TARGET_CLASS}");
@@ -76,7 +75,7 @@ while (wrapper.firstChild) {
 }
 
 wrapper.parentNode.replaceChild(docFrag, wrapper);
-`.split("\n").join(" ");
+`;
 
 export async function hideElements(driver: WebDriver, elements: WebElement[]) {
     await driver.executeScript(ADD_BLACKOUT_STYLE).catch((err) => { throw err; });
