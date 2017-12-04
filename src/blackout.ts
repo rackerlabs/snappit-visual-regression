@@ -1,4 +1,19 @@
 /**
+ * ABOUT: This is a couple of browser-based javascript functions that "blackout" dynamic elements. Why do that?
+ * Well, when you have, say, a field on your page that correlates with the "age" of something, you'll find that
+ * one day the age is "3 days ago", and next week will say "About a week ago". This will trigger a visual change,
+ * even though nothing about the visual style changed -- it was just text that did. The solution is to force this
+ * dynamic content to be "blacked out", reducing the amount of visual regressions that you see.
+ *
+ * Here's a breakdown of how this is accomplished.
+ * 0. Create a stylesheet in the <head> that
+ * 0. Contains some CSS that applys a "blackout backdrop" and a "blackout target", where
+ * 0. The blackout "target" is an element that contains dynamic text or other information that
+ *    will trigger invalid regressions unless said dynamic content is blacked out. And,
+ * 0. The blackout "backdrop" is a wrapper div that is set to `background: black !important`, and
+ * 0. Sets the opacity of the target element to 0, thereby revealing the all-black backdrop.
+ * Finally, there's a couple more javascript functions that simply clean up the styles/classes/wrapper divs.
+ *
  * NOTE: All of this uses strings for javascript functions (as opposed to using functions directly)
  * to avoid the annoying "no such variable 'document'", and so on. Javascript in the browser, in
  * this project, is considered an "external platform" and does not warrant including the "dom" library
@@ -17,7 +32,6 @@ const BLACKOUT_TARGET_CLASS = "blackout-target-added-by-snappit-visual-regressio
 const BLACKOUT_CSS = `
 .${BLACKOUT_BACKDROP_CLASS} {
   background: black !important;
-  background-color: black !important;
 }
 
 .${BLACKOUT_TARGET_CLASS} {
