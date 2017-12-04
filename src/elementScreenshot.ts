@@ -18,7 +18,7 @@ head.appendChild(style);
 `;
 
 const REMOVE_DROP_SCROLLBARS = `
-document.querySelector('#${SVR_ID}').remove();
+document.getElementById('${SVR_ID}').remove();
 `;
 
 class ElementScreenshot {
@@ -81,9 +81,19 @@ class ElementScreenshot {
             width: this.elementSize.width * devicePixelRatio,
         });
 
-        await this.driver.executeScript(DROP_SCROLLBARS);
+        await this.driver.executeScript(DROP_SCROLLBARS).catch((err: Error) => {
+            err.message = "Error dropping scrollbars for screenshot: " + err.message;
+            throw err;
+        });
+
         for (const screenshotCoordinate of coordinatesToScreenshotAt) {
-            await this.driver.executeScript(`window.scroll(${screenshotCoordinate.x}, ${screenshotCoordinate.y})`);
+            await this.driver.executeScript(`window.scroll(${screenshotCoordinate.x}, ${screenshotCoordinate.y})`)
+                .catch((err: Error) => {
+                    const coord = screenshotCoordinate;
+                    const additionalInfo = `Error scrolling browser to point (${coord.x}, ${coord.y}): `;
+                    err.message = additionalInfo + err.message;
+                    throw err;
+                });
 
             const root = await this.findElementCoordinatesInViewport(screenshotCoordinate);
             const min: ISize = {
@@ -99,6 +109,11 @@ class ElementScreenshot {
                 (screenshotCoordinate.y - this.elementLoc.y) * devicePixelRatio,
             );
         }
+
+        await this.driver.executeScript(REMOVE_DROP_SCROLLBARS).catch((err: Error) => {
+            err.message = "Error replacing scrollbars after screenshot: " + err.message;
+            throw err;
+        });
 
         return elementScreenshot;
     }
@@ -119,20 +134,20 @@ class ElementScreenshot {
 
     private async populateScreenshotCoordinates() {
         const coordinatesToScreenshotAt: ILocation[] = [];
-        const numberOfHorizontalScreenshots = Math.floor(this.elementSize.width / this.viewport.width) || 1;
-        const numberOfVerticalScreenshots = Math.floor(this.elementSize.height / this.viewport.height) || 1;
+        const numberOfHorizontalScreenshots = Math.floor(this.elementSize.width / this.viewport.width);
+        const numberOfVerticalScreenshots = Math.floor(this.elementSize.height / this.viewport.height);
         const extraHorizontalScreenshot = this.elementSize.width % this.viewport.width;
         const extraVerticalScreenshot = this.elementSize.height % this.viewport.height;
 
         let x = this.elementLoc.x;
         let y = this.elementLoc.y;
-        for (const iY of _.range(numberOfVerticalScreenshots).reverse()) {
-            for (const iX of _.range(numberOfHorizontalScreenshots).reverse()) {
+        for (const iY of _.range(numberOfVerticalScreenshots || 1).reverse()) {
+            for (const iX of _.range(numberOfHorizontalScreenshots || 1).reverse()) {
                 coordinatesToScreenshotAt.push({ x, y });
                 x += iX ? this.viewport.width : 0;
             }
 
-            if (numberOfHorizontalScreenshots > 1 && extraHorizontalScreenshot) {
+            if (numberOfHorizontalScreenshots && extraHorizontalScreenshot) {
                 x += extraHorizontalScreenshot;
                 coordinatesToScreenshotAt.push({ x, y });
             }
@@ -141,14 +156,14 @@ class ElementScreenshot {
             x = this.elementLoc.x;
         }
 
-        if (numberOfVerticalScreenshots > 1 && extraVerticalScreenshot) {
+        if (numberOfVerticalScreenshots && extraVerticalScreenshot) {
             y += extraVerticalScreenshot;
-            for (const iX of _.range(numberOfHorizontalScreenshots).reverse()) {
+            for (const iX of _.range(numberOfHorizontalScreenshots || 1).reverse()) {
                 coordinatesToScreenshotAt.push({ x, y });
                 x += iX ? this.viewport.width : 0;
             }
 
-            if (numberOfHorizontalScreenshots > 1 && extraHorizontalScreenshot) {
+            if (numberOfHorizontalScreenshots && extraHorizontalScreenshot) {
                 x += extraHorizontalScreenshot;
                 coordinatesToScreenshotAt.push({ x, y });
             }

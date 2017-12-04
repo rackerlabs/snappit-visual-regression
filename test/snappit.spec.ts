@@ -177,6 +177,50 @@ function browserTest(
 
         });
 
+        describe("blacking out elements", () => {
+            let previousHtml: string;
+            let previousHead: string;
+            const getOuterHtml = "return arguments[0].outerHTML";
+
+            before(async () => {
+                config.logException = [ScreenshotExceptionName.NO_BASELINE];
+                snappit = new Snappit(config);
+                driver = snappit.start();
+                await driver.get("http://localhost:8080/blackout-elements");
+                previousHtml = await driver.executeScript(getOuterHtml, $("#blackout")) as string;
+                previousHead = await driver.executeScript(getOuterHtml, $("head")) as string;
+            });
+
+            after(async () => {
+                await snappit.stop();
+            });
+
+            it("should black out one element", async () => {
+                await snap("blackout-one", $("#blackout"), { hide: [ $("#hide0") ] });
+            });
+
+            it("should reset the styles and the html when removing blackout styles", async () => {
+                const currentHtml = await driver.executeScript(getOuterHtml, $("#blackout")) as string;
+                const currentHead = await driver.executeScript(getOuterHtml, $("head")) as string;
+                expect(currentHtml).to.eql(previousHtml);
+                expect(currentHead).to.eql(previousHead);
+            });
+
+            it("should black out multiple elements", async () => {
+                await snap("blackout-many", $("#blackout"), {
+                    hide: await driver.findElements(By.css("img[id^='hide']")),
+                });
+            });
+
+            it("should reset the styles and the html when removing blackout styles on multiple elements", async () => {
+                const currentHtml = await driver.executeScript(getOuterHtml, $("#blackout")) as string;
+                const currentHead = await driver.executeScript(getOuterHtml, $("head")) as string;
+                expect(currentHtml).to.eql(previousHtml);
+                expect(currentHead).to.eql(previousHead);
+            });
+
+        });
+
         describe("re-configuration", () => {
             before(async () => {
                 driver = snappit.start();
@@ -227,7 +271,6 @@ function browserTest(
             });
 
             it("should take a screenshot with directory and path tokens", async () => {
-                // tslint:disable-next-line:no-console
                 const size = await driver.manage().window().getSize();
                 const capabilities = await driver.getCapabilities();
                 const version = (capabilities.get("version") || capabilities.get("browserVersion"))

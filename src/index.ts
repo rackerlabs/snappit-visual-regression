@@ -1,4 +1,4 @@
-export {$, snap, Snappit} from "./snappit";
+export {$, snap, Snappit, ISnapOptions} from "./snappit";
 export {
     NoDriverSessionException,
     ScreenshotException,
