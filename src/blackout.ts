@@ -78,9 +78,16 @@ wrapper.parentNode.replaceChild(docFrag, wrapper);
 `;
 
 export async function hideElements(driver: WebDriver, elements: WebElement[]) {
-    await driver.executeScript(ADD_BLACKOUT_STYLE).catch((err) => { throw err; });
+    await driver.executeScript(ADD_BLACKOUT_STYLE).catch((err: Error) => {
+        err.message = "Error adding blackout styles: " + err.message;
+        throw err;
+    });
+
     for (const element of elements) {
-        await driver.executeScript(ADD_BLACKOUT_BACKDROP, element).catch((err) => { throw err; });
+        await driver.executeScript(ADD_BLACKOUT_BACKDROP, element).catch((err: Error) => {
+            err.message = "Error adding blackout backdrop: " + err.message;
+            throw err;
+        });
     }
 }
 
@@ -88,12 +95,19 @@ export async function hideElements(driver: WebDriver, elements: WebElement[]) {
  * If you leave `elements` empty, it'll remove any and all matching blackout elements it finds.
  */
 export async function unhideElements(driver: WebDriver, elements?: WebElement[]) {
-    await driver.executeScript(REMOVE_BLACKOUT_STYLE).catch((err) => { throw err; });
+    await driver.executeScript(REMOVE_BLACKOUT_STYLE).catch((err: Error) => {
+        err.message = "Error removing blackout styles: " + err.message;
+        throw err;
+    });
+
     if (elements === undefined) {
         elements = await driver.findElements(By.className(BLACKOUT_TARGET_CLASS));
     }
 
     for (const element of elements) {
-        await driver.executeScript(REMOVE_BLACKOUT_BACKDROP, element).catch((err) => { throw err; });
+        await driver.executeScript(REMOVE_BLACKOUT_BACKDROP, element).catch((err: Error) => {
+            err.message = "Error removing blackout backdrop: " + err.message;
+            throw err;
+        });
     }
 }

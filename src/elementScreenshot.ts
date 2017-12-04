@@ -81,9 +81,19 @@ class ElementScreenshot {
             width: this.elementSize.width * devicePixelRatio,
         });
 
-        await this.driver.executeScript(DROP_SCROLLBARS);
+        await this.driver.executeScript(DROP_SCROLLBARS).catch((err: Error) => {
+            err.message = "Error dropping scrollbars for screenshot: " + err.message;
+            throw err;
+        });
+
         for (const screenshotCoordinate of coordinatesToScreenshotAt) {
-            await this.driver.executeScript(`window.scroll(${screenshotCoordinate.x}, ${screenshotCoordinate.y})`);
+            await this.driver.executeScript(`window.scroll(${screenshotCoordinate.x}, ${screenshotCoordinate.y})`)
+                .catch((err: Error) => {
+                    const coord = screenshotCoordinate;
+                    const additionalInfo = `Error scrolling browser to point (${coord.x}, ${coord.y}): `;
+                    err.message = additionalInfo + err.message;
+                    throw err;
+                });
 
             const root = await this.findElementCoordinatesInViewport(screenshotCoordinate);
             const min: ISize = {
@@ -100,7 +110,11 @@ class ElementScreenshot {
             );
         }
 
-        await this.driver.executeScript(REMOVE_DROP_SCROLLBARS);
+        await this.driver.executeScript(REMOVE_DROP_SCROLLBARS).catch((err: Error) => {
+            err.message = "Error replacing scrollbars after screenshot: " + err.message;
+            throw err;
+        });
+
         return elementScreenshot;
     }
 
