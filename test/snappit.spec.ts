@@ -87,6 +87,30 @@ function browserTest(
             });
         });
 
+        describe("when setting initial viewport size", async () => {
+            const width = 1200;
+            const height = 900;
+
+            before(async () => {
+                config.initialViewportSize = [width, height];
+                snappit = new Snappit(config);
+                driver = await snappit.start();
+                await driver.get("http://localhost:8080/");
+            });
+
+            after(async () => {
+                await snappit.stop();
+            });
+
+            it("should set the viewport size to the desired width", async () => {
+                expect((await driver.manage().window().getSize()).width).to.equal(width);
+            });
+
+            it("should set the viewport size to the desired height", async () => {
+                expect((await driver.manage().window().getSize()).height).to.equal(height);
+            });
+        });
+
         describe("screenshots", () => {
             let devicePixelRatio: number;
 
@@ -220,53 +244,6 @@ function browserTest(
             });
 
         });
-
-        if (config.headless) {
-            const defaultWidth = config.browser === "chrome" ? 800 : 1366;
-            const defaultHeight = config.browser === "chrome" ? 600 : 768;
-            const width = 1200;
-            const height = 900;
-
-            describe("omitting headless browser size", async () => {
-                before(async () => {
-                    driver = await snappit.start();
-                    await driver.get("http://localhost:8080/");
-                });
-
-                after(async () => {
-                    await snappit.stop();
-                });
-
-                it("should set the viewport size to the default width", async () => {
-                    expect((await driver.manage().window().getSize()).width).to.equal(defaultWidth);
-                });
-
-                it("should set the viewport size to the default height", async () => {
-                    expect((await driver.manage().window().getSize()).height).to.equal(defaultHeight);
-                });
-            });
-
-            describe("when setting headless browser size", async () => {
-                before(async () => {
-                    config.initialViewportSize = [width, height];
-                    snappit = new Snappit(config);
-                    driver = await snappit.start();
-                    await driver.get("http://localhost:8080/");
-                });
-
-                after(async () => {
-                    await snappit.stop();
-                });
-
-                it("should set the viewport size to the desired width", async () => {
-                    expect((await driver.manage().window().getSize()).width).to.equal(width);
-                });
-
-                it("should set the viewport size to the desired height", async () => {
-                    expect((await driver.manage().window().getSize()).height).to.equal(height);
-                });
-            });
-        }
 
         describe("re-configuration", () => {
             before(async () => {
