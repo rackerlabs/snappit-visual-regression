@@ -55,7 +55,7 @@ function browserTest(
         describe("driver initialization", () => {
             it("should create a driver instance", async () => {
                 // Snappit will throw if there is a problem in driver creation.
-                driver = snappit.start();
+                driver = await snappit.start();
                 await driver;
             });
 
@@ -87,13 +87,37 @@ function browserTest(
             });
         });
 
+        describe("when setting initial viewport size", async () => {
+            const width = 1200;
+            const height = 900;
+
+            before(async () => {
+                config.initialViewportSize = [width, height];
+                snappit = new Snappit(config);
+                driver = await snappit.start();
+                await driver.get("http://localhost:8080/");
+            });
+
+            after(async () => {
+                await snappit.stop();
+            });
+
+            it("should set the viewport size to the desired width", async () => {
+                expect((await driver.manage().window().getSize()).width).to.equal(width);
+            });
+
+            it("should set the viewport size to the desired height", async () => {
+                expect((await driver.manage().window().getSize()).height).to.equal(height);
+            });
+        });
+
         describe("screenshots", () => {
             let devicePixelRatio: number;
 
             before(async () => {
                 config.logException = [ScreenshotExceptionName.NO_BASELINE];
                 snappit = new Snappit(config);
-                driver = snappit.start();
+                driver = await snappit.start();
                 await driver.get("http://localhost:8080/");
                 devicePixelRatio = await driver.executeScript("return window.devicePixelRatio") as number;
             });
@@ -185,7 +209,7 @@ function browserTest(
             before(async () => {
                 config.logException = [ScreenshotExceptionName.NO_BASELINE];
                 snappit = new Snappit(config);
-                driver = snappit.start();
+                driver = await snappit.start();
                 await driver.get("http://localhost:8080/blackout-elements");
                 previousHtml = await driver.executeScript(getOuterHtml, $("#blackout")) as string;
                 previousHead = await driver.executeScript(getOuterHtml, $("head")) as string;
@@ -223,7 +247,7 @@ function browserTest(
 
         describe("re-configuration", () => {
             before(async () => {
-                driver = snappit.start();
+                driver = await snappit.start();
                 await driver.get("http://localhost:8080/");
             });
 

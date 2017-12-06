@@ -89,9 +89,9 @@ export class Snappit {
         this.config = prepareConfig(config);
     }
 
-    public start(): WebDriver {
+    public async start(): Promise<WebDriver> {
         if (!this.driver) {
-            this.driver = getDriver(this.config);
+            this.driver = await getDriver(this.config);
         }
 
         // Update the exported shorthand methods

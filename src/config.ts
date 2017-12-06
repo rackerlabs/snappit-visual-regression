@@ -21,6 +21,7 @@ export interface ISnappitConfig {
 export interface IConfig extends ISnappitConfig {
     browser: string;
     headless?: boolean;
+    initialViewportSize?: [number, number];
     paths?: IConfigPaths;
     serverUrl?: string;
     useProvidedDriver?: boolean;
