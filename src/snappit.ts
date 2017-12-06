@@ -89,7 +89,7 @@ export class Snappit {
         this.config = prepareConfig(config);
     }
 
-    public async start() {
+    public async start(): Promise<WebDriver> {
         if (!this.driver) {
             this.driver = await getDriver(this.config);
         }

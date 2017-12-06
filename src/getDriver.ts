@@ -8,7 +8,7 @@ import {IConfig} from "./config";
 
 export async function getDriver(
     config: IConfig,
-) {
+): Promise<Webdriver.WebDriver> {
     const builder = new Webdriver.Builder()
         .usingServer(config.serverUrl)
         .forBrowser(config.browser);
