@@ -134,13 +134,21 @@ export class Snappit {
     public async snap(
         name: string,
         element?: WebElement,
-        opts?: ISnapOptions,
+        opts: ISnapOptions = {
+            hide: [],
+        },
     ): Promise<void> {
         const filePath = await Screenshot.buildPath(name, this.driver, this.config.screenshotsDir);
         const shortPath = path.relative(process.cwd(), filePath);
-        await blackout.hideElements(this.driver, opts.hide);
+        if (opts.hide.length) {
+            await blackout.hideElements(this.driver, opts.hide);
+        }
+
         const newShot = await Screenshot.take(this.driver, element);
-        await blackout.unhideElements(this.driver, opts.hide);
+
+        if (opts.hide.length) {
+            await blackout.unhideElements(this.driver, opts.hide);
+        }
 
         // Baseline image exists
         if (fs.existsSync(filePath)) {
