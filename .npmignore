@@ -1,4 +1,9 @@
-test
+test/
+/bin/
+/src/
 .travis.yml
 .gitignore
 mocha.opts
+tsconfig.json
+tslint.json
+types/
