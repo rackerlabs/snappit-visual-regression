@@ -1,5 +1,4 @@
 test/
-/bin/
 /src/
 .travis.yml
 .gitignore
