@@ -8,8 +8,8 @@ platform_gecko='linux64'
 platform_chrome='linux64'
 [ `uname` == 'Darwin' ] && platform_gecko='macos' && platform_chrome='mac64'
 
-TARFILE_GECKO=v0.19.0/geckodriver-v0.19.0-${platform_gecko}.tar.gz
-ZIPFILE_CHROME=2.33/chromedriver_${platform_chrome}.zip
+TARFILE_GECKO=v0.19.1/geckodriver-v0.19.1-${platform_gecko}.tar.gz
+ZIPFILE_CHROME=2.35/chromedriver_${platform_chrome}.zip
 JARFILE_STANDALONE=3.6/selenium-server-standalone-3.6.0.jar
 
 curl --silent -kL https://${GH_TOKEN}@github.com/mozilla/geckodriver/releases/download/${TARFILE_GECKO} | tar xz

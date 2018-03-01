@@ -19,7 +19,7 @@ before_script:
 - jdk_switcher use oraclejdk8
 - npm run mockserver > /dev/null 2>&1 &
 - npm run webdriver > /dev/null 2>&1 &
-- sleep 5
+- sleep 15
 script:
 - npm test
 after_script:

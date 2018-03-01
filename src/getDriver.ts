@@ -13,26 +13,28 @@ export async function getDriver(
         .usingServer(config.serverUrl)
         .forBrowser(config.browser);
 
-    if (config.headless) {
-        if (config.browser === Webdriver.Browser.FIREFOX) {
-            const options = new Firefox.Options();
-            const binary = new Firefox.Binary();
-            binary.addArguments("-headless");
-            options.setBinary(binary);
-            builder.setFirefoxOptions(options);
-
-        } else if (config.browser === Webdriver.Browser.CHROME) {
-            const capabilities = Webdriver.Capabilities.chrome();
-            const headlessArgs = ["--headless"];
+    if (config.browser === Webdriver.Browser.CHROME) {
+        const capabilities = Webdriver.Capabilities.chrome();
+        const args = ["--no-sandbox"];
+        if (config.headless) {
+            args.push("--headless");
             if (config.initialViewportSize) {
-                headlessArgs.push(`--window-size=${config.initialViewportSize.slice(0, 2).join(",")}`);
+                args.push(`--window-size=${config.initialViewportSize.slice(0, 2).join(",")}`);
             }
-
-            capabilities.set("chromeOptions", {
-                args: headlessArgs,
-            });
-            builder.withCapabilities(capabilities);
         }
+
+        capabilities.set("chromeOptions", {
+            args,
+        });
+        builder.withCapabilities(capabilities);
+    }
+
+    if (config.browser === Webdriver.Browser.FIREFOX && config.headless) {
+        const options = new Firefox.Options();
+        const binary = new Firefox.Binary();
+        binary.addArguments("-headless");
+        options.setBinary(binary);
+        builder.setFirefoxOptions(options);
     }
 
     const driver = builder.build() as Webdriver.WebDriver;
