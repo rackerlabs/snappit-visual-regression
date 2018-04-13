@@ -20,7 +20,6 @@ export interface ISnappitConfig {
 
 // https://wiki.saucelabs.com/display/DOCS/Test+Configuration+Options
 export interface ISauceLabs {
-    autoAcceptAlerts?: boolean; // iOS only
     browserName?: string;
     build?: string; // displayed on both the Dashboard and Archives view
     chromedriverVersion?: string; // "2.35", "latest"
@@ -38,8 +37,8 @@ export interface ISauceLabs {
     recordVideo?: boolean;
     tags?: string; // for grouping and filtering jobs in the Dashboard and Archives view
     timeZone?: string; // "Los Angeles", "New_York"
-    tunnelIdentifier?: string;
-    "tunnel-identifier"?: string;
+    tunnelIdentifier?: string; // "tunnel-identifier is the "official" configuration option...
+    "tunnel-identifier"?: string; // "tunnelIdentifier" can be used instead to avoid bracket notation, if desired
     version?: string; // browser version
     screenResolution?: string; // "1280x1024"
     seleniumVersion?: string;
