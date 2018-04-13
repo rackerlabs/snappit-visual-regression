@@ -177,4 +177,12 @@ export class Snappit {
     ): void {
         this.config = prepareConfig(_.defaults(_.cloneDeep(config), this.config));
     }
+
+    public async setSauceLabsJobResult(passed: boolean) {
+        await this.driver.executeScript(`sauce:job-result="${passed}"`);
+    }
+
+    public async setSauceLabsAnnotation(annotation: string) {
+        await this.driver.executeScript(`sauce:context="${annotation}"`);
+    }
 }
