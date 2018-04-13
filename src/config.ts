@@ -39,7 +39,7 @@ export interface ISauceLabs {
     tags?: string; // for grouping and filtering jobs in the Dashboard and Archives view
     timeZone?: string; // "Los Angeles", "New_York"
     tunnelIdentifier?: string;
-    'tunnel-identifier'?: string;
+    "tunnel-identifier"?: string;
     version?: string; // browser version
     screenResolution?: string; // "1280x1024"
     seleniumVersion?: string;

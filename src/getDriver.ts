@@ -15,7 +15,7 @@ export async function getDriver(
 
     // saucelabs makes typescript ugly
     if (config.sauceLabs.tunnelIdentifier !== undefined) {
-        config.sauceLabs['tunnel-identifier'] = config.sauceLabs.tunnelIdentifier;
+        config.sauceLabs["tunnel-identifier"] = config.sauceLabs.tunnelIdentifier;
     }
 
     if (config.browser === Webdriver.Browser.CHROME) {
