@@ -23,12 +23,12 @@ export interface ISauceLabs {
     browserName?: string;
     build?: string; // displayed on both the Dashboard and Archives view
     chromedriverVersion?: string; // "2.35", "latest"
-    commandTimeout?: number;
+    commandTimeout?: number; // seconds
     customData?: any; // any valid JSON object, limited to 64KB in size
     extendedDebugging?: boolean;
-    idleTimeout?: number;
+    idleTimeout?: number; // seconds
     iedriverVersion?: string;
-    maxDuration?: number;
+    maxDuration?: number; // seconds
     name?: string; // test names for jobs in the Dashboard and Archives view
     platform?: string; // "OS X 10.9", "Windows 10", "Linux", "Windows 7"
     priority?: number; // priority starts at 0 for highest, then 1 for next highest, etc.
