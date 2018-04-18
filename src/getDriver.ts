@@ -13,8 +13,13 @@ export async function getDriver(
         .usingServer(config.serverUrl)
         .forBrowser(config.browser);
 
+    // saucelabs makes typescript ugly
+    if (config.sauceLabs.tunnelIdentifier !== undefined) {
+        config.sauceLabs["tunnel-identifier"] = config.sauceLabs.tunnelIdentifier;
+    }
+
     if (config.browser === Webdriver.Browser.CHROME) {
-        const capabilities = Webdriver.Capabilities.chrome();
+        const capabilitiesChrome = Webdriver.Capabilities.chrome();
         const args = ["--no-sandbox"];
         if (config.headless) {
             args.push("--headless");
@@ -23,18 +28,27 @@ export async function getDriver(
             }
         }
 
-        capabilities.set("chromeOptions", {
+        capabilitiesChrome.merge(config.sauceLabs);
+        capabilitiesChrome.set("chromeOptions", {
             args,
         });
-        builder.withCapabilities(capabilities);
+
+        builder.withCapabilities(capabilitiesChrome);
     }
 
-    if (config.browser === Webdriver.Browser.FIREFOX && config.headless) {
-        const options = new Firefox.Options();
-        const binary = new Firefox.Binary();
-        binary.addArguments("-headless");
-        options.setBinary(binary);
-        builder.setFirefoxOptions(options);
+    if (config.browser === Webdriver.Browser.FIREFOX) {
+        const capabilitiesFirefox = Webdriver.Capabilities.firefox();
+        capabilitiesFirefox.merge(config.sauceLabs);
+
+        if (config.headless) {
+            const options = new Firefox.Options();
+            const binary = new Firefox.Binary();
+            binary.addArguments("-headless");
+            options.setBinary(binary);
+            builder.setFirefoxOptions(options);
+        }
+
+        builder.withCapabilities(capabilitiesFirefox);
     }
 
     const driver = builder.build() as Webdriver.WebDriver;
