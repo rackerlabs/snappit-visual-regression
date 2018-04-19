@@ -89,11 +89,17 @@ function getBinaryPaths(): IConfigPaths {
 function validateConfig(
     config: IConfig,
 ): void {
-    const validBrowsers = [Webdriver.Browser.CHROME, Webdriver.Browser.FIREFOX];
+    const validBrowsers = [
+        Webdriver.Browser.CHROME,
+        Webdriver.Browser.FIREFOX,
+        Webdriver.Browser.SAFARI,
+        Webdriver.Browser.EDGE,
+        Webdriver.Browser.INTERNET_EXPLORER,
+    ];
 
     const isValidBrowser = _.includes(validBrowsers, config.browser);
     if (!config.useProvidedDriver && !isValidBrowser) {
-        throw new Error('Configuration error: Please set a "browser" of either "chrome" or "firefox".');
+        throw new Error(`Configuration error: Please set a "browser" of one of ${validBrowsers.join(", ")}.`);
     }
 
     const isValidThreshold = config.threshold && config.threshold >= 0 && config.threshold <= 0.99;
