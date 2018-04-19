@@ -1,6 +1,6 @@
 {
   "name": "snappit-visual-regression",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "description": "A visual regression testing library for JavaScript",
   "engines": {
     "node": ">=6.9.x"
