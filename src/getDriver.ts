@@ -51,6 +51,27 @@ export async function getDriver(
         builder.withCapabilities(capabilitiesFirefox);
     }
 
+    if (config.browser === Webdriver.Browser.SAFARI) {
+        const capabilitiesSafari = Webdriver.Capabilities.safari();
+        capabilitiesSafari.merge(config.sauceLabs);
+
+        builder.withCapabilities(capabilitiesSafari);
+    }
+
+    if (config.browser === Webdriver.Browser.EDGE) {
+        const capabilitiesEdge = Webdriver.Capabilities.edge();
+        capabilitiesEdge.merge(config.sauceLabs);
+
+        builder.withCapabilities(capabilitiesEdge);
+    }
+
+    if (config.browser === Webdriver.Browser.INTERNET_EXPLORER) {
+        const capabilitiesIe = Webdriver.Capabilities.ie();
+        capabilitiesIe.merge(config.sauceLabs);
+
+        builder.withCapabilities(capabilitiesIe);
+    }
+
     const driver = builder.build() as Webdriver.WebDriver;
 
     if (config.initialViewportSize) {
