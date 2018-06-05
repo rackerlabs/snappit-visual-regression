@@ -15,3 +15,10 @@ JARFILE_STANDALONE=3.6/selenium-server-standalone-3.6.0.jar
 curl --silent -kL https://${GH_TOKEN}@github.com/mozilla/geckodriver/releases/download/${TARFILE_GECKO} | tar xz
 curl --silent -kL https://chromedriver.storage.googleapis.com/${ZIPFILE_CHROME} -o tmp && unzip -o tmp && rm tmp
 curl --silent -kL https://selenium-release.storage.googleapis.com/${JARFILE_STANDALONE} -o selenium-server-standalone.jar
+
+if [ `uname` == 'Darwin' ]
+then
+curl --silent -kL https://saucelabs.com/downloads/sc-4.4.11-osx.zip -o sc && unzip -jo sc sc-4.4.11-osx/bin/sc
+else
+curl --silent -kL https://saucelabs.com/downloads/sc-4.4.11-linux.tar.gz | tar xz --strip-components 2 sc-4.4.11-linux/bin/sc
+fi
