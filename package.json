@@ -57,7 +57,7 @@
   },
   "dependencies": {
     "dom-to-image": "^2.6.0",
-    "fs-extra": "^5.0.0",
+    "fs-extra": "^7.0.0",
     "lodash": "^4.17.4",
     "pngjs": "^3.3.0",
     "selenium-webdriver": "^3.6.0"
