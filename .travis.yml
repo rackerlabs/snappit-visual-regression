@@ -27,7 +27,7 @@ script:
 after_script:
 - greenkeeper-lockfile-upload
 before_deploy:
-- npm build
+- npm run build
 deploy:
   provider: npm
   email: j.andrichak@rackspace.com
