@@ -73,12 +73,13 @@ class ElementScreenshot {
                  *    to start from zero.
                  *
                  *    width/height are either going to be the total width of the screenshot, adjusting for scrollbars
-                 *    or the difference between the offset above and the rect.right/.bottom coordinate of the element.
+                 *    or the rect.right/.bottom offset of the element.  In either case, we must subtract the sourceX/Y
+                 *    coordinates.
                  */
                 const sourceX = rect.left > 0 ? rect.left : 0;
                 const sourceY = rect.top > 0 ? rect.top : 0;
-                const width = Math.min(rect.right - sourceX, screenshot.width - scrollbarOffsets.horizontal);
-                const height = Math.min(rect.bottom - sourceY, screenshot.height - scrollbarOffsets.vertical);
+                const width = Math.min(rect.right, screenshot.width - scrollbarOffsets.horizontal) - sourceX;
+                const height = Math.min(rect.bottom, screenshot.height - scrollbarOffsets.vertical) - sourceY;
 
                 // If we would overwrite width/height by too much, adjust the cursor.
                 if (width + cursor.x > initialRect.width) {
@@ -138,8 +139,8 @@ class ElementScreenshot {
 
     /**
      * Retrieve the element's bounding box accounting for devicePixelRatio.  Note that this may result
-     * in partial pixels.  After inspecting the screenshots, using the floor should most closely replicate
-     * previous behavior, resulting in less breaking changes.
+     * in partial pixels. Change to round here to fix a math error related to very large fractions in the
+     * bounding box sometimes tipping over when the screen is scrolled.
      */
     private getBoundingClientRect = async () => {
         const rect = await this.driver.executeScript(
@@ -150,7 +151,7 @@ class ElementScreenshot {
         // Transform to integers.
         const floor: MutableClientRect = rect;
         for (const key of Object.keys(rect) as Array<keyof ClientRect>) {
-            floor[key] = Math.floor(rect[key]) * this.devicePixelRatio;
+            floor[key] = Math.round(rect[key]) * this.devicePixelRatio;
         }
         return floor;
     }
