@@ -8,171 +8,189 @@ import {
 } from "selenium-webdriver";
 
 const SVR_ID = "added-by-snappit-visual-regression";
-const DROP_SCROLLBARS = `
-var head = document.querySelector("head");
-var style = document.createElement("style");
-style.id = "${SVR_ID}";
-style.type = "text/css";
-style.innerText = "::-webkit-scrollbar { display: none; }"
-head.appendChild(style);
-`;
 
-const REMOVE_DROP_SCROLLBARS = `
-document.getElementById('${SVR_ID}').remove();
-`;
+interface IScrollbarOffsets {
+    horizontal: number;
+    vertical: number;
+}
+
+// TSLint doesn't understand the new 2.8 mapped type modifiers
+/* tslint:disable */
+type MutableClientRect = {
+    -readonly [P in keyof ClientRect]: ClientRect[P];
+}
+/* tslint:enable */
 
 class ElementScreenshot {
     private driver: WebDriver;
     private element: WebElement;
-    private elementLoc: ILocation;
-    private elementSize: ISize;
-    private viewport: ISize;
+    private devicePixelRatio: number;
 
     constructor(
-        driver: WebDriver,
         element: WebElement,
     ) {
-        this.driver = driver;
+        this.driver = element.getDriver();
         this.element = element;
     }
-    /**
-     * Constructor functions cannot be async. This will bootstrap some shared values used between
-     * the logic that takes *all* screenshots and the one that takes *the majority* of the screenshots.
-     */
+
     public async prepare() {
-        if (process.env.CI) {
-            /*
-             * You can't trust the viewport size via javascript (at least in travis-ci, anyway). Last I checked, the
-             * reported size of the viewport was one pixel smaller than the one reported by the width and height
-             * of the screenshot taken of the full window. Since the screenshot reports the correct "viewport"
-             * size for our use case, it is used as the "official" measurement.
-             */
-            const measurementScreenshot = await this.screenshot();
-            this.viewport = {
-                height: measurementScreenshot.height,
-                width: measurementScreenshot.width,
-            };
-
-        } else {
-            this.viewport = {
-                height: (await this.driver.executeScript("return window.innerHeight")) as number,
-                width: (await this.driver.executeScript("return window.innerWidth")) as number,
-            };
-
-            const firefoxHeadless = (await this.driver.getCapabilities()).get("moz:headless");
-            if (firefoxHeadless) {
-                // I think this is used because FF headless doesn't consider scrollbars as part of the viewport...?
-                const OFFSET = 15; // pixels
-                this.viewport.height = this.viewport.height -= OFFSET;
-                this.viewport.width = this.viewport.width -= OFFSET;
-            }
-        }
-
-        this.elementSize = await this.element.getSize();
-        this.elementLoc = await this.element.getLocation();
+        this.devicePixelRatio = await this.getDevicePixelRatio();
         return this;
     }
 
     public async take() {
-        const coordinatesToScreenshotAt = await this.populateScreenshotCoordinates();
-        const devicePixelRatio = (await this.driver.executeScript("return window.devicePixelRatio")) as number;
-        const elementScreenshot = new PNG({
-            height: this.elementSize.height * devicePixelRatio,
-            width: this.elementSize.width * devicePixelRatio,
-        });
+        // Drop scrollbars
+        await this.dropScrollbars();
 
-        await this.driver.executeScript(DROP_SCROLLBARS).catch((err: Error) => {
-            err.message = "Error dropping scrollbars for screenshot: " + err.message;
-            throw err;
-        });
+        // Position the element on screen, this is guaranteed to get the top-left corner of the element on screen.
+        await this.scrollToLocation(0, 0);
+        const initialRect = await this.getBoundingClientRect();
+        await this.scrollToLocation(initialRect.left, initialRect.top);
 
-        for (const screenshotCoordinate of coordinatesToScreenshotAt) {
-            await this.driver.executeScript(`window.scroll(${screenshotCoordinate.x}, ${screenshotCoordinate.y})`)
-                .catch((err: Error) => {
-                    const coord = screenshotCoordinate;
-                    const additionalInfo = `Error scrolling browser to point (${coord.x}, ${coord.y}): `;
-                    err.message = additionalInfo + err.message;
-                    throw err;
-                });
+        // Create base screenshot.
+        const elementScreenshot = new PNG(initialRect);
 
-            const root = await this.findElementCoordinatesInViewport(screenshotCoordinate);
-            const min: ISize = {
-                height: Math.min(this.viewport.height, this.elementSize.height),
-                width: Math.min(this.viewport.width, this.elementSize.width),
-            };
+        const cursor: ILocation = {
+            x: 0,
+            y: 0,
+        };
 
-            PNG.bitblt(
-                await this.screenshot(), elementScreenshot,
-                root.x * devicePixelRatio, root.y * devicePixelRatio,
-                min.width * devicePixelRatio, min.height * devicePixelRatio,
-                (screenshotCoordinate.x - this.elementLoc.x) * devicePixelRatio,
-                (screenshotCoordinate.y - this.elementLoc.y) * devicePixelRatio,
-            );
+        // Find out which sides we have scrollbars on and get offsets for those bars.
+        const scrollbarOffsets = await this.getScrollbarOffsets();
+
+        // Until we've filled up the entire elementScreenshot
+        while (cursor.y < initialRect.height) {
+            while (cursor.x < initialRect.width) {
+
+                // Take a new screenshot at the current location
+                const screenshot = await this.screenshot();
+                const rect = await this.getBoundingClientRect();
+
+                /**
+                 *  Given the offset information in rect, determine the intersection with the current screenshot.
+                 *    rect.left/.top represent the left and top coordinates relative to the viewport.  If they are
+                 *    negative then the element's origin is above or to the left of the current screenshot, so we need
+                 *    to start from zero.
+                 *
+                 *    width/height are either going to be the total width of the screenshot, adjusting for scrollbars
+                 *    or the difference between the offset above and the rect.right/.bottom coordinate of the element.
+                 */
+                const sourceX = rect.left > 0 ? rect.left : 0;
+                const sourceY = rect.top > 0 ? rect.top : 0;
+                const width = Math.min(rect.right - sourceX, screenshot.width - scrollbarOffsets.horizontal);
+                const height = Math.min(rect.bottom - sourceY, screenshot.height - scrollbarOffsets.vertical);
+
+                // If we would overwrite width/height by too much, adjust the cursor.
+                if (width + cursor.x > initialRect.width) {
+                    cursor.x = initialRect.width - width;
+                }
+                if (height + cursor.y > initialRect.height) {
+                    cursor.y = initialRect.height - height;
+                }
+
+                PNG.bitblt(
+                    screenshot,
+                    elementScreenshot,
+                    sourceX,
+                    sourceY,
+                    width,
+                    height,
+                    cursor.x,
+                    cursor.y,
+                );
+
+                cursor.x += width;
+
+                if (cursor.x >= initialRect.width) {
+                    cursor.x = 0;
+                    cursor.y += height;
+                    break;
+                }
+                this.scrollToLocation(initialRect.left + cursor.x, initialRect.top + cursor.y);
+            }
+            this.scrollToLocation(initialRect.left + cursor.x, initialRect.top + cursor.y);
         }
 
-        await this.driver.executeScript(REMOVE_DROP_SCROLLBARS).catch((err: Error) => {
-            err.message = "Error replacing scrollbars after screenshot: " + err.message;
-            throw err;
-        });
+        // Restore scrollbars
+        await this.removeDropScrollbars();
 
         return elementScreenshot;
     }
 
+    private getDevicePixelRatio = () =>
+        this.driver.executeScript(() => window.devicePixelRatio) as Promise<number>
+
+    private dropScrollbars = () =>
+        this.driver.executeScript(
+            () => {
+                const head = document.querySelector("head");
+                const style = document.createElement("style");
+                style.id = arguments[0];
+                style.type = "text/css";
+                style.innerText = "::-webkit-scrollbar { display: none; }";
+                head.appendChild(style);
+            },
+            SVR_ID,
+        ).catch((err: Error): void => {
+            err.message = "Error attempting to drop scrollbars before screenshot: " + err.message;
+            throw err;
+        }) as Promise<void>
+
+    /**
+     * Retrieve the element's bounding box accounting for devicePixelRatio.  Note that this may result
+     * in partial pixels.  After inspecting the screenshots, using the floor should most closely replicate
+     * previous behavior, resulting in less breaking changes.
+     */
+    private getBoundingClientRect = async () => {
+        const rect = await this.driver.executeScript(
+            () => (arguments[0] as Element).getBoundingClientRect(),
+            this.element,
+        ) as ClientRect;
+
+        // Transform to integers.
+        const floor: MutableClientRect = rect;
+        for (const key of Object.keys(rect) as Array<keyof ClientRect>) {
+            floor[key] = Math.floor(rect[key]) * this.devicePixelRatio;
+        }
+        return floor;
+    }
+
+    private getScrollbarOffsets = () =>
+        this.driver.executeScript(
+            () => {
+                const docElement = document.documentElement || document.getElementsByTagName("html")[0];
+                return {
+                    horizontal: docElement.scrollWidth > docElement.scrollHeight ? 15 * arguments[0] : 0,
+                    vertical: docElement.scrollHeight > docElement.clientHeight ? 15 * arguments[0] : 0,
+                };
+            },
+            this.devicePixelRatio,
+        ) as Promise<IScrollbarOffsets>
+
+    private removeDropScrollbars = () =>
+        this.driver.executeScript(
+            () => document.getElementById(arguments[0]).remove(),
+            SVR_ID,
+        ).catch((err: Error): void => {
+            err.message = "Error replacing scrollbars after screenshot: " + err.message;
+            throw err;
+        }) as Promise<void>
+
+    /**
+     * Scroll to the specified location on screen accounting for devicePixelRatio.
+     */
+    private scrollToLocation = (left: number, top: number) =>
+        this.driver.executeScript(
+            () => window.scrollTo(arguments[0], arguments[1]),
+            left / this.devicePixelRatio,
+            top / this.devicePixelRatio,
+        ) as Promise<void>
+
     private async screenshot() {
         return PNG.sync.read(new Buffer(await this.driver.takeScreenshot(), "base64"));
     }
-
-    private async findElementCoordinatesInViewport(
-        screenshotCoordinate: ILocation,
-    ): Promise<ILocation> {
-        const scrollPositionX = await this.driver.executeScript("return window.pageXOffset;") as number;
-        const scrollPositionY = await this.driver.executeScript("return window.pageYOffset;") as number;
-        const rootX = screenshotCoordinate.x - scrollPositionX;
-        const rootY = screenshotCoordinate.y - scrollPositionY;
-        return { x: rootX, y: rootY };
-    }
-
-    private async populateScreenshotCoordinates() {
-        const coordinatesToScreenshotAt: ILocation[] = [];
-        const numberOfHorizontalScreenshots = Math.floor(this.elementSize.width / this.viewport.width);
-        const numberOfVerticalScreenshots = Math.floor(this.elementSize.height / this.viewport.height);
-        const extraHorizontalScreenshot = this.elementSize.width % this.viewport.width;
-        const extraVerticalScreenshot = this.elementSize.height % this.viewport.height;
-
-        let x = this.elementLoc.x;
-        let y = this.elementLoc.y;
-        for (const iY of _.range(numberOfVerticalScreenshots || 1).reverse()) {
-            for (const iX of _.range(numberOfHorizontalScreenshots || 1).reverse()) {
-                coordinatesToScreenshotAt.push({ x, y });
-                x += iX ? this.viewport.width : 0;
-            }
-
-            if (numberOfHorizontalScreenshots && extraHorizontalScreenshot) {
-                x += extraHorizontalScreenshot;
-                coordinatesToScreenshotAt.push({ x, y });
-            }
-
-            y += iY ? this.viewport.height : 0;
-            x = this.elementLoc.x;
-        }
-
-        if (numberOfVerticalScreenshots && extraVerticalScreenshot) {
-            y += extraVerticalScreenshot;
-            for (const iX of _.range(numberOfHorizontalScreenshots || 1).reverse()) {
-                coordinatesToScreenshotAt.push({ x, y });
-                x += iX ? this.viewport.width : 0;
-            }
-
-            if (numberOfHorizontalScreenshots && extraHorizontalScreenshot) {
-                x += extraHorizontalScreenshot;
-                coordinatesToScreenshotAt.push({ x, y });
-            }
-        }
-
-        return coordinatesToScreenshotAt;
-    }
 }
 
-export default async function(driver: WebDriver, element: WebElement) {
-    return (await new ElementScreenshot(driver, element).prepare()).take();
+export default async function(element: WebElement) {
+    return (await new ElementScreenshot(element).prepare()).take();
 }
