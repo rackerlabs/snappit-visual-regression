@@ -161,7 +161,7 @@ class ElementScreenshot {
             () => {
                 const docElement = document.documentElement || document.getElementsByTagName("html")[0];
                 return {
-                    horizontal: docElement.scrollWidth > docElement.scrollHeight ? 15 * arguments[0] : 0,
+                    horizontal: docElement.scrollWidth > docElement.clientWidth ? 15 * arguments[0] : 0,
                     vertical: docElement.scrollHeight > docElement.clientHeight ? 15 * arguments[0] : 0,
                 };
             },
