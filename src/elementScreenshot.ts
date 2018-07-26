@@ -2,24 +2,34 @@ import * as _ from "lodash";
 import { PNG } from "pngjs";
 import {
     ILocation,
-    ISize,
     WebDriver,
     WebElement,
 } from "selenium-webdriver";
 
 const SVR_ID = "added-by-snappit-visual-regression";
 
-interface IScrollbarOffsets {
-    horizontal: number;
-    vertical: number;
-}
+/** Provides a consistent Rect object to wrap other rects */
+class Rect {
+    public bottom: number = 0;
+    public height: number = 0;
+    public left: number = 0;
+    public right: number = 0;
+    public top: number = 0;
+    public width: number = 0;
 
-// TSLint doesn't understand the new 2.8 mapped type modifiers
-/* tslint:disable */
-type MutableClientRect = {
-    -readonly [P in keyof ClientRect]: ClientRect[P];
+    constructor(rect: Rect, devicePixelRatio: number = 0, relativeTo?: Rect) {
+        for (const key of Object.keys(this) as Array<keyof ClientRect>) {
+            this[key] = Math.round(rect[key]) * devicePixelRatio;
+        }
+
+        if (relativeTo) {
+            this.bottom -= relativeTo.bottom;
+            this.left -= relativeTo.left;
+            this.right -= relativeTo.right;
+            this.top -= relativeTo.top;
+        }
+    }
 }
-/* tslint:enable */
 
 class ElementScreenshot {
     private driver: WebDriver;
@@ -34,7 +44,7 @@ class ElementScreenshot {
     }
 
     public async prepare() {
-        this.devicePixelRatio = await this.getDevicePixelRatio();
+        this.devicePixelRatio = await this.prepareDevicePixelRatio();
         return this;
     }
 
@@ -42,21 +52,35 @@ class ElementScreenshot {
         // Drop scrollbars
         await this.dropScrollbars();
 
-        // Position the element on screen, this is guaranteed to get the top-left corner of the element on screen.
-        await this.scrollToLocation(0, 0);
-        const initialRect = await this.getBoundingClientRect();
-        await this.scrollToLocation(initialRect.left, initialRect.top);
+        // Get viewport
+        const {viewport, viewportRect} = await this.prepareViewport();
+
+        /* Position the element in the viewport by scrolling to the top left of the viewport, then attempting to
+         * scroll the viewport to the relative top left of the element.  Since scrolling is based on the viewport
+         * element, we'll adjust the initial position to be relative to the viewport.
+         */
+        await this.scrollToLocation(viewport, 0, 0);
+        const initialRect = await this.getBoundingClientRect(viewportRect);
+        await this.scrollToLocation(
+            viewport,
+            initialRect.left,
+            initialRect.top,
+        );
 
         // Create base screenshot.
-        const elementScreenshot = new PNG(initialRect);
+        const elementScreenshot = new PNG(new Rect(initialRect, this.devicePixelRatio));
 
         const cursor: ILocation = {
             x: 0,
             y: 0,
         };
 
-        // Find out which sides we have scrollbars on and get offsets for those bars.
-        const scrollbarOffsets = await this.getScrollbarOffsets();
+        /* tslint:disable */
+        console.log({
+            initialRect,
+            viewportRect: viewportRect,
+        });
+        /* tslint:enable */
 
         // Until we've filled up the entire elementScreenshot
         while (cursor.y < initialRect.height) {
@@ -67,21 +91,23 @@ class ElementScreenshot {
                 const rect = await this.getBoundingClientRect();
 
                 /**
-                 *  Given the offset information in rect, determine the intersection with the current screenshot.
-                 *    rect.left/.top represent the left and top coordinates relative to the viewport.  If they are
-                 *    negative then the element's origin is above or to the left of the current screenshot, so we need
-                 *    to start from zero.
+                 * Given the offset information in rect, determine the intersection with the current viewport's
+                 * position on the screen.
                  *
-                 *    width/height are either going to be the total width of the screenshot, adjusting for scrollbars
-                 *    or the rect.right/.bottom offset of the element.  In either case, we must subtract the sourceX/Y
-                 *    coordinates.
+                 * The formula for the intersection of two rectangles is the max of the left and top offsets,
+                 * and the min of the right and bottom offsets.
+                 *
+                 * To find the width and the height, we have to subtract top from bottom, left from right.
                  */
-                const sourceX = rect.left > 0 ? rect.left : 0;
-                const sourceY = rect.top > 0 ? rect.top : 0;
-                const width = Math.min(rect.right, screenshot.width - scrollbarOffsets.horizontal) - sourceX;
-                const height = Math.min(rect.bottom, screenshot.height - scrollbarOffsets.vertical) - sourceY;
+                const sourceX = Math.max(rect.left, viewportRect.left);
+                const sourceY = Math.max(rect.top, viewportRect.top);
+                const width = Math.min(rect.right, viewportRect.right) - sourceX;
+                const height = Math.min(rect.bottom, viewportRect.bottom) - sourceY;
 
-                // If we would overwrite width/height by too much, adjust the cursor.
+                /**
+                 * If we would overwrite width/height by too much, adjust the cursor.  This is slightly less
+                 * efficient but conceptually simpler than adjusting the source and width.
+                 */
                 if (width + cursor.x > initialRect.width) {
                     cursor.x = initialRect.width - width;
                 }
@@ -99,6 +125,19 @@ class ElementScreenshot {
                     cursor.x,
                     cursor.y,
                 );
+                /* tslint:disable */
+                console.log({
+                    rect,
+                    bitblt: {
+                        sourceX,
+                        sourceY,
+                        width,
+                        height,
+                        x: cursor.x,
+                        y: cursor.y,
+                    },
+                });
+                /* tslint:enable */
 
                 cursor.x += width;
 
@@ -107,9 +146,9 @@ class ElementScreenshot {
                     cursor.y += height;
                     break;
                 }
-                this.scrollToLocation(initialRect.left + cursor.x, initialRect.top + cursor.y);
+                this.scrollToLocation(viewport, initialRect.left + cursor.x, initialRect.top + cursor.y);
             }
-            this.scrollToLocation(initialRect.left + cursor.x, initialRect.top + cursor.y);
+            this.scrollToLocation(viewport, initialRect.left + cursor.x, initialRect.top + cursor.y);
         }
 
         // Restore scrollbars
@@ -118,9 +157,9 @@ class ElementScreenshot {
         return elementScreenshot;
     }
 
-    private getDevicePixelRatio = () =>
-        this.driver.executeScript(() => window.devicePixelRatio) as Promise<number>
-
+    /**
+     * Drops scrollbars in webkit browsers
+     */
     private dropScrollbars = () =>
         this.driver.executeScript(
             () => {
@@ -128,7 +167,10 @@ class ElementScreenshot {
                 const style = document.createElement("style");
                 style.id = arguments[0];
                 style.type = "text/css";
-                style.innerText = "::-webkit-scrollbar { display: none; }";
+                style.innerText = `
+                    *::-webkit-scrollbar { display: none !important; }
+                    *{overflow: -moz-scrollbars-none !important;}
+                `;
                 head.appendChild(style);
             },
             SVR_ID,
@@ -138,35 +180,77 @@ class ElementScreenshot {
         }) as Promise<void>
 
     /**
-     * Retrieve the element's bounding box accounting for devicePixelRatio.  Note that this may result
-     * in partial pixels. Change to round here to fix a math error related to very large fractions in the
-     * bounding box sometimes tipping over when the screen is scrolled.
+     * Retrieve the element's bounding box accounting for devicePixelRatio.
+     * Note that `Element.getBoundingClientRect` can return subpixels, so we need to round here.
+     * If you pass a `Rect` in as `relativeTo`, the element's position will be adjusted to be relative.
      */
-    private getBoundingClientRect = async () => {
+    private getBoundingClientRect = async (relativeTo?: Rect) => {
         const rect = await this.driver.executeScript(
             () => (arguments[0] as Element).getBoundingClientRect(),
             this.element,
         ) as ClientRect;
 
         // Transform to integers.
-        const floor: MutableClientRect = rect;
-        for (const key of Object.keys(rect) as Array<keyof ClientRect>) {
-            floor[key] = Math.round(rect[key]) * this.devicePixelRatio;
-        }
-        return floor;
+        return new Rect(rect, this.devicePixelRatio, relativeTo);
     }
 
-    private getScrollbarOffsets = () =>
-        this.driver.executeScript(
+    private prepareDevicePixelRatio = () =>
+        this.driver.executeScript(() => window.devicePixelRatio) as Promise<number>
+
+    /**
+     * Retrieve the element's viewport and viewport bounding box accounting for devicePixelRatio.
+     * Note that `Element.getBoundingClientRect` can return subpixels, so we need to round here.
+     */
+    private prepareViewport = async () => {
+        const viewport = await (this.driver.executeScript(
             () => {
                 const docElement = document.documentElement || document.getElementsByTagName("html")[0];
-                return {
-                    horizontal: docElement.scrollWidth > docElement.clientWidth ? 15 * arguments[0] : 0,
-                    vertical: docElement.scrollHeight > docElement.clientHeight ? 15 * arguments[0] : 0,
-                };
+
+                let parent = (arguments[0] as Element).parentElement;
+                while (
+                    (window.getComputedStyle(parent).overflowX !== "scroll" &&
+                    window.getComputedStyle(parent).overflowY !== "scroll") ||
+                    parent.scrollHeight === parent.clientHeight &&
+                    parent.scrollWidth === parent.clientWidth
+                ) {
+                    parent = parent.parentElement;
+                    if (parent === docElement) {
+                        break;
+                    }
+                }
+                return parent;
             },
-            this.devicePixelRatio,
-        ) as Promise<IScrollbarOffsets>
+            this.element,
+        ) as Promise<WebElement>);
+
+        const rect = await this.driver.executeScript(
+            () => {
+                const docElement = document.documentElement || document.getElementsByTagName("html")[0];
+                const element = arguments[0] as Element;
+
+                // Compute the bounding box using a fake element;
+                if (element !== docElement) {
+                    const child = document.createElement("div");
+                    child.style.setProperty("margin", "0px", "important");
+                    child.style.setProperty("border", "0px", "important");
+                    child.style.setProperty("position", "absolute", "important");
+                    child.style.setProperty("width", `${element.clientWidth}px`, "important");
+                    child.style.setProperty("height", `${element.clientHeight}px`, "important");
+                    element.insertBefore(child, element.firstChild);
+                    const childRect = (child as Element).getBoundingClientRect();
+                    child.remove();
+                    return childRect;
+                }
+                return (element as Element).getBoundingClientRect();
+            },
+            viewport,
+        ) as ClientRect;
+
+        // Transform to integers.
+        const adjustedRect = new Rect(rect, this.devicePixelRatio);
+
+        return {viewport, viewportRect: adjustedRect};
+    }
 
     private removeDropScrollbars = () =>
         this.driver.executeScript(
@@ -178,11 +262,15 @@ class ElementScreenshot {
         }) as Promise<void>
 
     /**
-     * Scroll to the specified location on screen accounting for devicePixelRatio.
+     * Scroll to the specified location on screen accounting for devicePixelRatio.  This method assumes viewport
+     * coordinates, so you will need to adjust your inputs appropriately.
      */
-    private scrollToLocation = (left: number, top: number) =>
+    private scrollToLocation = (viewport: WebElement, left: number, top: number) =>
         this.driver.executeScript(
-            () => window.scrollTo(arguments[0], arguments[1]),
+            () => {
+                (arguments[0] as Element).scrollTo(arguments[1], arguments[2]);
+            },
+            viewport,
             left / this.devicePixelRatio,
             top / this.devicePixelRatio,
         ) as Promise<void>

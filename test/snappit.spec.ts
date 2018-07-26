@@ -201,6 +201,31 @@ function browserTest(
 
         });
 
+        describe("internal scrolling elements", () => {
+            before(async () => {
+                config.logException = [ScreenshotExceptionName.NO_BASELINE];
+                snappit = new Snappit(config);
+                driver = await snappit.start();
+                await driver.get("http://localhost:8080/internal-scroll.html");
+            });
+
+            after(async () => {
+                await snappit.stop();
+            });
+
+            it.only("should take a screenshot of an element inside a x-scrolling div", async () => {
+                await snap("internal-scroll-x", $("#scroll-x"));
+            });
+
+            it("should take a screenshot of an element inside a y-scrolling div", async () => {
+                await snap("internal-scroll-y", $("#scroll-y"));
+            });
+
+            it("should take a screenshot of an element inside a scrolling div", async () => {
+                await snap("internal-scroll", $("#scroll"));
+            });
+        });
+
         describe("blacking out elements", () => {
             let previousHtml: string;
             let previousHead: string;
@@ -331,17 +356,17 @@ describe("Snappit", () => {
         browser: "chrome",
     });
 
-    browserTest("GeckoDriver FireFox", {
-        browser: "firefox",
-    });
+    // browserTest("GeckoDriver FireFox", {
+    //     browser: "firefox",
+    // });
 
-    browserTest("Chrome Headless", {
-        browser: "chrome",
-        headless: true,
-    });
+    // browserTest("Chrome Headless", {
+    //     browser: "chrome",
+    //     headless: true,
+    // });
 
-    browserTest("GeckoDriver FireFox Headless", {
-        browser: "firefox",
-        headless: true,
-    });
+    // browserTest("GeckoDriver FireFox Headless", {
+    //     browser: "firefox",
+    //     headless: true,
+    // });
 });
