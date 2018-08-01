@@ -1,9 +1,8 @@
 import * as fs from "fs-extra";
 import * as _ from "lodash";
 import * as path from "path";
-import {PNG} from "pngjs";
 import {
-    By, error as WebDriverError,
+    By,
     WebDriver, WebElement,
 } from "selenium-webdriver";
 
@@ -34,6 +33,7 @@ import {Screenshot} from "./screenshot";
 let shorthandInstance: Snappit;
 
 export interface ISnapOptions {
+    elementContent?: boolean;
     hide?: WebElement[];
 }
 
@@ -41,6 +41,7 @@ export async function snap(
     name: string,
     element?: WebElement,
     opts: ISnapOptions = {
+        elementContent: false,
         hide: [],
     },
 ): Promise<void> {
@@ -134,17 +135,17 @@ export class Snappit {
     public async snap(
         name: string,
         element?: WebElement,
-        opts: ISnapOptions = {
-            hide: [],
-        },
+        opts?: ISnapOptions,
     ): Promise<void> {
+        opts = _.defaults(opts, { elementContent: false, hide: []});
+
         const filePath = await Screenshot.buildPath(name, this.driver, this.config.screenshotsDir);
         const shortPath = path.relative(process.cwd(), filePath);
         if (opts.hide.length) {
             await blackout.hideElements(this.driver, opts.hide);
         }
 
-        const newShot = await Screenshot.take(this.driver, element);
+        const newShot = await Screenshot.take(this.driver, element, opts.elementContent);
 
         if (opts.hide.length) {
             await blackout.unhideElements(this.driver, opts.hide);

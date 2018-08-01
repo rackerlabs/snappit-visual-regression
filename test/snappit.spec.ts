@@ -201,7 +201,7 @@ function browserTest(
 
         });
 
-        describe("internal scrolling elements", () => {
+        describe.only("internal scrolling elements", () => {
             before(async () => {
                 config.logException = [ScreenshotExceptionName.NO_BASELINE];
                 snappit = new Snappit(config);
@@ -213,16 +213,16 @@ function browserTest(
                 await snappit.stop();
             });
 
-            it.only("should take a screenshot of an element inside a x-scrolling div", async () => {
-                await snap("internal-scroll-x", $("#scroll-x"));
-            });
-
-            it("should take a screenshot of an element inside a y-scrolling div", async () => {
-                await snap("internal-scroll-y", $("#scroll-y"));
-            });
-
             it("should take a screenshot of an element inside a scrolling div", async () => {
                 await snap("internal-scroll", $("#scroll"));
+            });
+
+            it("should take a screenshot of an element inside a scrolling div with padding", async () => {
+                await snap("internal-scroll-padding", $("#scroll-padding"));
+            });
+
+            it("should take a screenshot of the content inside a scrolling div", async () => {
+                await snap("internal-scroll-content", $("#scroll-content"), {elementContent: true});
             });
         });
 

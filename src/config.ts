@@ -17,7 +17,6 @@ export interface ISnappitConfig {
     screenshotsDir?: string;
     threshold?: number;
 }
-
 // https://wiki.saucelabs.com/display/DOCS/Test+Configuration+Options
 export interface ISauceLabs {
     browserName?: string;

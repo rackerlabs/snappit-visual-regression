@@ -5,62 +5,55 @@ import {
     WebDriver,
     WebElement,
 } from "selenium-webdriver";
+import { Rect } from "./rect";
 
 const SVR_ID = "added-by-snappit-visual-regression";
 
-/** Provides a consistent Rect object to wrap other rects */
-class Rect {
-    public bottom: number = 0;
-    public height: number = 0;
-    public left: number = 0;
-    public right: number = 0;
-    public top: number = 0;
-    public width: number = 0;
-
-    constructor(rect: Rect, devicePixelRatio: number = 0, relativeTo?: Rect) {
-        for (const key of Object.keys(this) as Array<keyof ClientRect>) {
-            this[key] = Math.round(rect[key]) * devicePixelRatio;
-        }
-
-        if (relativeTo) {
-            this.bottom -= relativeTo.bottom;
-            this.left -= relativeTo.left;
-            this.right -= relativeTo.right;
-            this.top -= relativeTo.top;
-        }
-    }
-}
-
+/**
+ * Class for an Element Screenshot.
+ */
 class ElementScreenshot {
     private driver: WebDriver;
-    private element: WebElement;
-    private devicePixelRatio: number;
 
+    /**
+     * Creates a new `ElementScreenshot` object.
+     * @param element `WebElement` to screenshot, or whose contents to screenshot (see below).
+     * @param elementContent `boolean` indicating whether or not screenshot the element's contents instead,
+     *   only valid for scrolling elements.
+     */
     constructor(
-        element: WebElement,
+        private element: WebElement,
+        private elementContent: boolean = false,
     ) {
         this.driver = element.getDriver();
-        this.element = element;
     }
 
-    public async prepare() {
-        this.devicePixelRatio = await this.prepareDevicePixelRatio();
-        return this;
-    }
-
+    /**
+     * Takes the element screenshot.
+     *
+     * If `this.elementContent` is set to true, the element will be used as a viewport and the elements contents
+     * will be screenshotted instead.
+     */
     public async take() {
         // Drop scrollbars
         await this.dropScrollbars();
 
         // Get viewport
-        const {viewport, viewportRect} = await this.prepareViewport();
+        const viewport = this.elementContent
+            ? this.element
+            : await this.getViewportElement();
+
+        const viewportRect = await new Rect().forViewportElement(viewport);
 
         /* Position the element in the viewport by scrolling to the top left of the viewport, then attempting to
          * scroll the viewport to the relative top left of the element.  Since scrolling is based on the viewport
          * element, we'll adjust the initial position to be relative to the viewport.
          */
         await this.scrollToLocation(viewport, 0, 0);
-        const initialRect = await this.getBoundingClientRect(viewportRect);
+        const initialRect = this.elementContent
+            ? (await new Rect().forElementContent(this.element)).relativeTo(viewportRect)
+            : (await new Rect().forElement(this.element)).relativeTo(viewportRect);
+
         await this.scrollToLocation(
             viewport,
             initialRect.left,
@@ -68,7 +61,7 @@ class ElementScreenshot {
         );
 
         // Create base screenshot.
-        const elementScreenshot = new PNG(new Rect(initialRect, this.devicePixelRatio));
+        const elementScreenshot = new PNG(initialRect.duplicate());
 
         const cursor: ILocation = {
             x: 0,
@@ -88,7 +81,9 @@ class ElementScreenshot {
 
                 // Take a new screenshot at the current location
                 const screenshot = await this.screenshot();
-                const rect = await this.getBoundingClientRect();
+                const rect = this.elementContent
+                    ? (await new Rect().forElementContent(this.element))
+                    : await new Rect().forElement(this.element);
 
                 /**
                  * Given the offset information in rect, determine the intersection with the current viewport's
@@ -158,7 +153,7 @@ class ElementScreenshot {
     }
 
     /**
-     * Drops scrollbars in webkit browsers
+     * Drops scrollbars in all modern browsers.
      */
     private dropScrollbars = () =>
         this.driver.executeScript(
@@ -180,78 +175,34 @@ class ElementScreenshot {
         }) as Promise<void>
 
     /**
-     * Retrieve the element's bounding box accounting for devicePixelRatio.
-     * Note that `Element.getBoundingClientRect` can return subpixels, so we need to round here.
-     * If you pass a `Rect` in as `relativeTo`, the element's position will be adjusted to be relative.
-     */
-    private getBoundingClientRect = async (relativeTo?: Rect) => {
-        const rect = await this.driver.executeScript(
-            () => (arguments[0] as Element).getBoundingClientRect(),
-            this.element,
-        ) as ClientRect;
-
-        // Transform to integers.
-        return new Rect(rect, this.devicePixelRatio, relativeTo);
-    }
-
-    private prepareDevicePixelRatio = () =>
-        this.driver.executeScript(() => window.devicePixelRatio) as Promise<number>
-
-    /**
      * Retrieve the element's viewport and viewport bounding box accounting for devicePixelRatio.
      * Note that `Element.getBoundingClientRect` can return subpixels, so we need to round here.
      */
-    private prepareViewport = async () => {
-        const viewport = await (this.driver.executeScript(
-            () => {
-                const docElement = document.documentElement || document.getElementsByTagName("html")[0];
+    private getViewportElement = async () =>
+        this.driver.executeScript(
+        () => {
+            const docElement = document.documentElement || document.getElementsByTagName("html")[0];
 
-                let parent = (arguments[0] as Element).parentElement;
-                while (
-                    (window.getComputedStyle(parent).overflowX !== "scroll" &&
-                    window.getComputedStyle(parent).overflowY !== "scroll") ||
-                    parent.scrollHeight === parent.clientHeight &&
-                    parent.scrollWidth === parent.clientWidth
-                ) {
-                    parent = parent.parentElement;
-                    if (parent === docElement) {
-                        break;
-                    }
+            let parent = (arguments[0] as Element).parentElement;
+            while (
+                (window.getComputedStyle(parent).overflowX !== "scroll" &&
+                window.getComputedStyle(parent).overflowY !== "scroll") ||
+                parent.scrollHeight === parent.clientHeight &&
+                parent.scrollWidth === parent.clientWidth
+            ) {
+                parent = parent.parentElement;
+                if (parent === docElement) {
+                    break;
                 }
-                return parent;
-            },
-            this.element,
-        ) as Promise<WebElement>);
+            }
+            return parent;
+        },
+        this.element,
+    ) as Promise<WebElement>
 
-        const rect = await this.driver.executeScript(
-            () => {
-                const docElement = document.documentElement || document.getElementsByTagName("html")[0];
-                const element = arguments[0] as Element;
-
-                // Compute the bounding box using a fake element;
-                if (element !== docElement) {
-                    const child = document.createElement("div");
-                    child.style.setProperty("margin", "0px", "important");
-                    child.style.setProperty("border", "0px", "important");
-                    child.style.setProperty("position", "absolute", "important");
-                    child.style.setProperty("width", `${element.clientWidth}px`, "important");
-                    child.style.setProperty("height", `${element.clientHeight}px`, "important");
-                    element.insertBefore(child, element.firstChild);
-                    const childRect = (child as Element).getBoundingClientRect();
-                    child.remove();
-                    return childRect;
-                }
-                return (element as Element).getBoundingClientRect();
-            },
-            viewport,
-        ) as ClientRect;
-
-        // Transform to integers.
-        const adjustedRect = new Rect(rect, this.devicePixelRatio);
-
-        return {viewport, viewportRect: adjustedRect};
-    }
-
+    /**
+     * Undo the drop scrollbars style.
+     */
     private removeDropScrollbars = () =>
         this.driver.executeScript(
             () => document.getElementById(arguments[0]).remove(),
@@ -268,11 +219,16 @@ class ElementScreenshot {
     private scrollToLocation = (viewport: WebElement, left: number, top: number) =>
         this.driver.executeScript(
             () => {
-                (arguments[0] as Element).scrollTo(arguments[1], arguments[2]);
+                const pixelRatio = window.devicePixelRatio;
+                const x = arguments[1] / pixelRatio;
+                const y = arguments[2] / pixelRatio;
+                const element = (arguments[0] as Element);
+
+                element.scrollTo(x, y);
             },
             viewport,
-            left / this.devicePixelRatio,
-            top / this.devicePixelRatio,
+            left,
+            top,
         ) as Promise<void>
 
     private async screenshot() {
@@ -280,6 +236,6 @@ class ElementScreenshot {
     }
 }
 
-export default async function(element: WebElement) {
-    return (await new ElementScreenshot(element).prepare()).take();
+export default async function(element: WebElement, elementContent: boolean) {
+    return new ElementScreenshot(element, elementContent).take();
 }

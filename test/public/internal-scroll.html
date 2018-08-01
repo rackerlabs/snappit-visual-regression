@@ -15,14 +15,15 @@
         </style>
     </head>
     <body>
-        <div style="overflow-x:scroll;">
-            <img id="scroll-x" src="./img/test.png"></img>
-        </div>
-        <div style="overflow-y:scroll;">
-            <img id="scroll-y" src="./img/test.png"></img>
-        </div>
         <div style="overflow:scroll;">
             <img id="scroll" src="./img/test.png"></img>
+        </div>
+        <div style="overflow:scroll; padding:10px">
+            <img id="scroll-padding" src="./img/test.png"></img>
+        </div>
+        <div style="overflow:scroll;" id="scroll-content">
+            <img src="./img/test.png"></img>
+            <P>And some text beneath the image.</P>
         </div>
     </body>
 </html>
