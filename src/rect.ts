@@ -78,7 +78,12 @@ export class Rect {
         newRect.bottom = newRect.top + scrollRect.height;
         newRect.right = newRect.left + scrollRect.width;
 
-        return newRect;
+        // Set the pixelRatio.
+        const pixelRatio = await element.getDriver().executeScript(
+            () => window.devicePixelRatio,
+        ) as number;
+
+        return newRect.withPixelRatio(pixelRatio);
     }
 
     /**
@@ -165,7 +170,7 @@ export class Rect {
 
         // Transform to whole pixels.
         for (const key of RECT_KEYS) {
-            newRect[key] = Math.round(this[key] * pixelRatio);
+            newRect[key] = Math.round(this[key]) * pixelRatio;
         }
 
         return newRect;

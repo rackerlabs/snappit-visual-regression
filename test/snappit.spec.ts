@@ -1,5 +1,6 @@
 import {expect} from "chai";
 import * as fs from "fs-extra";
+import jimp = require("jimp");
 import {By, WebDriver} from "selenium-webdriver";
 
 import {IConfig} from "../src/config";
@@ -14,6 +15,10 @@ import {
 import {$, snap, Snappit} from "../src/snappit";
 
 type ISuiteFn = typeof describe | typeof describe.only | typeof describe.skip;
+
+function compareImages(driver: WebDriver, src: string, dst: string) {
+    /* TODO */
+}
 
 function browserTest(
     suiteName: string,
@@ -158,8 +163,8 @@ function browserTest(
                 const originalImageLocation = `./test/public/img/${imageName}`;
                 const savedImageLocation = `${suitePath}/${imageName}`;
 
-                fs.copyFileSync(originalImageLocation, savedImageLocation);
                 await snap(imageName, $("#too-wide"));
+                compareImages(driver, originalImageLocation, savedImageLocation);
             });
 
             it("should take a snapshot of an element that is too tall", async () => {
@@ -168,8 +173,8 @@ function browserTest(
                 const originalImageLocation = `./test/public/img/${imageName}`;
                 const savedImageLocation = `${suitePath}/${imageName}`;
 
-                fs.copyFileSync(originalImageLocation, savedImageLocation);
                 await snap(imageName, $("#too-tall"));
+                compareImages(driver, originalImageLocation, savedImageLocation);
             });
 
             it("should take a snapshot of an element that is too wide and too tall", async () => {
@@ -178,8 +183,8 @@ function browserTest(
                 const originalImageLocation = `./test/public/img/${imageName}`;
                 const savedImageLocation = `${suitePath}/${imageName}`;
 
-                fs.copyFileSync(originalImageLocation, savedImageLocation);
                 await snap(imageName, $("#too-wide-too-tall"));
+                compareImages(driver, originalImageLocation, savedImageLocation);
             });
 
         });
@@ -205,24 +210,24 @@ function browserTest(
                 const imageName = "internal-scroll.png";
                 const savedImageLocation = `${suitePath}/${imageName}`;
 
-                fs.copyFileSync(originalImageLocation, savedImageLocation);
                 await snap(imageName, $("#scroll"));
+                compareImages(driver, originalImageLocation, savedImageLocation);
             });
 
             it("should take a screenshot of an element inside a scrolling div with padding", async () => {
                 const imageName = "internal-scroll-padding.png";
                 const savedImageLocation = `${suitePath}/${imageName}`;
 
-                fs.copyFileSync(originalImageLocation, savedImageLocation);
                 await snap(imageName, $("#scroll-padding"));
+                compareImages(driver, originalImageLocation, savedImageLocation);
             });
 
             it("should take a screenshot of the content inside a scrolling div", async () => {
                 const imageName = "internal-scroll-content.png";
                 const savedImageLocation = `${suitePath}/${imageName}`;
 
-                fs.copyFileSync(originalImageLocation, savedImageLocation);
                 await snap(imageName, $("#scroll-content"), {elementContent: true});
+                compareImages(driver, originalImageLocation, savedImageLocation);
             });
         });
 
