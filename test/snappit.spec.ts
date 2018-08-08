@@ -1,17 +1,11 @@
-import * as childProcess from "child_process";
-
 import {expect} from "chai";
 import * as fs from "fs-extra";
-import * as _ from "lodash";
-import * as path from "path";
-import {PNG} from "pngjs";
-import {By, ISize, WebDriver, WebElementPromise} from "selenium-webdriver";
+import {By, WebDriver} from "selenium-webdriver";
 
-import {IConfig, ISnappitConfig} from "../src/config";
+import {IConfig} from "../src/config";
 
 import {
     NoDriverSessionException,
-    ScreenshotException,
     ScreenshotExceptionName,
     ScreenshotMismatchException,
     ScreenshotNoBaselineException,
@@ -112,14 +106,15 @@ function browserTest(
         });
 
         describe("screenshots", () => {
-            let devicePixelRatio: number;
+            const suitePath = `./test/screenshots/${suiteName.split(" ").join("-")}`;
 
             before(async () => {
                 config.logException = [ScreenshotExceptionName.NO_BASELINE];
                 snappit = new Snappit(config);
                 driver = await snappit.start();
                 await driver.get("http://localhost:8080/");
-                devicePixelRatio = await driver.executeScript("return window.devicePixelRatio") as number;
+
+                fs.ensureDirSync(suitePath);
             });
 
             after(async () => {
@@ -161,52 +156,45 @@ function browserTest(
                 await driver.get("http://localhost:8080/too-wide");
                 const imageName = "too-wide.png";
                 const originalImageLocation = `./test/public/img/${imageName}`;
-                const savedImageLocation = `./test/screenshots/${suiteName.split(" ").join("-")}/${imageName}`;
+                const savedImageLocation = `${suitePath}/${imageName}`;
 
+                fs.copyFileSync(originalImageLocation, savedImageLocation);
                 await snap(imageName, $("#too-wide"));
-                const originalPng = PNG.sync.read(fs.readFileSync(originalImageLocation));
-                const savedPng = PNG.sync.read(fs.readFileSync(savedImageLocation));
-
-                expect(originalPng.width * devicePixelRatio).to.eql(savedPng.width);
-                expect(originalPng.height * devicePixelRatio).to.eql(savedPng.height);
             });
 
             it("should take a snapshot of an element that is too tall", async () => {
                 await driver.get("http://localhost:8080/too-tall");
                 const imageName = "too-tall.png";
                 const originalImageLocation = `./test/public/img/${imageName}`;
-                const savedImageLocation = `./test/screenshots/${suiteName.split(" ").join("-")}/${imageName}`;
+                const savedImageLocation = `${suitePath}/${imageName}`;
 
+                fs.copyFileSync(originalImageLocation, savedImageLocation);
                 await snap(imageName, $("#too-tall"));
-                const originalPng = PNG.sync.read(fs.readFileSync(originalImageLocation));
-                const savedPng = PNG.sync.read(fs.readFileSync(savedImageLocation));
-
-                expect(originalPng.width * devicePixelRatio).to.eql(savedPng.width);
-                expect(originalPng.height * devicePixelRatio).to.eql(savedPng.height);
             });
 
             it("should take a snapshot of an element that is too wide and too tall", async () => {
                 await driver.get("http://localhost:8080/too-wide-too-tall");
                 const imageName = "too-wide-too-tall.png";
                 const originalImageLocation = `./test/public/img/${imageName}`;
-                const savedImageLocation = `./test/screenshots/${suiteName.split(" ").join("-")}/${imageName}`;
+                const savedImageLocation = `${suitePath}/${imageName}`;
 
+                fs.copyFileSync(originalImageLocation, savedImageLocation);
                 await snap(imageName, $("#too-wide-too-tall"));
-                const originalPng = PNG.sync.read(fs.readFileSync(originalImageLocation));
-                const savedPng = PNG.sync.read(fs.readFileSync(savedImageLocation));
-
-                expect(originalPng.width * devicePixelRatio).to.eql(savedPng.width);
-                expect(originalPng.height * devicePixelRatio).to.eql(savedPng.height);
             });
 
         });
 
         describe("internal scrolling elements", () => {
+            const originalImageLocation = `./test/public/img/test.png`;
+            const suitePath = `./test/screenshots/${suiteName.split(" ").join("-")}`;
+
             before(async () => {
                 config.logException = [ScreenshotExceptionName.NO_BASELINE];
                 snappit = new Snappit(config);
                 driver = await snappit.start();
                 await driver.get("http://localhost:8080/internal-scroll.html");
+
+                fs.ensureDirSync(suitePath);
             });
 
             after(async () => {
@@ -214,15 +202,27 @@ function browserTest(
             });
 
             it("should take a screenshot of an element inside a scrolling div", async () => {
-                await snap("internal-scroll", $("#scroll"));
+                const imageName = "internal-scroll";
+                const savedImageLocation = `${suitePath}/${imageName}`;
+
+                fs.copyFileSync(originalImageLocation, savedImageLocation);
+                await snap(imageName, $("#scroll"));
             });
 
             it("should take a screenshot of an element inside a scrolling div with padding", async () => {
-                await snap("internal-scroll-padding", $("#scroll-padding"));
+                const imageName = "internal-scroll-padding";
+                const savedImageLocation = `${suitePath}/${imageName}`;
+
+                fs.copyFileSync(originalImageLocation, savedImageLocation);
+                await snap(imageName, $("#scroll-padding"));
             });
 
             it("should take a screenshot of the content inside a scrolling div", async () => {
-                await snap("internal-scroll-content", $("#scroll-content"), {elementContent: true});
+                const imageName = "internal-scroll-content";
+                const savedImageLocation = `${suitePath}/${imageName}`;
+
+                fs.copyFileSync(originalImageLocation, savedImageLocation);
+                await snap(imageName, $("#scroll-content"), {elementContent: true});
             });
         });
 

@@ -1,4 +1,3 @@
-import * as _ from "lodash";
 import { PNG } from "pngjs";
 import {
     ILocation,
@@ -6,6 +5,7 @@ import {
     WebElement,
 } from "selenium-webdriver";
 import { Rect } from "./rect";
+import { $ } from "./snappit";
 
 const SVR_ID = "added-by-snappit-visual-regression";
 
@@ -13,6 +13,18 @@ const SVR_ID = "added-by-snappit-visual-regression";
  * Class for an Element Screenshot.
  */
 class ElementScreenshot {
+    /**
+     * The body element presents a few problems, so we just skip over it and return docElement instead.
+     * @param element `WebElement` to check for equivalence to `$('body')`.
+     */
+    public static dodgeBodyElement = (element: WebElement) =>
+        element.getDriver().executeScript(() => {
+            const bodyElement = document.getElementsByTagName("body")[0];
+            const docElement = document.documentElement || document.getElementsByTagName("html")[0];
+            const elem = arguments[0] as Element;
+            return elem === bodyElement ? docElement : elem;
+        }) as Promise<WebElement>
+
     private driver: WebDriver;
 
     /**
@@ -27,7 +39,6 @@ class ElementScreenshot {
     ) {
         this.driver = element.getDriver();
     }
-
     /**
      * Takes the element screenshot.
      *
@@ -155,27 +166,32 @@ class ElementScreenshot {
         }) as Promise<void>
 
     /**
-     * Retrieve the element's viewport and viewport bounding box accounting for devicePixelRatio.
-     * Note that `Element.getBoundingClientRect` can return subpixels, so we need to round here.
+     * Retrieve the element's viewport element.  If there is no parent return the doc element.
      */
     private getViewportElement = async () =>
         this.driver.executeScript(
         () => {
             const docElement = document.documentElement || document.getElementsByTagName("html")[0];
-
             let parent = (arguments[0] as Element).parentElement;
+
+            if (!parent) {
+                return docElement;
+            }
+
             while (
-                (window.getComputedStyle(parent).overflowX !== "scroll" &&
-                window.getComputedStyle(parent).overflowY !== "scroll") ||
                 parent.scrollHeight === parent.clientHeight &&
-                parent.scrollWidth === parent.clientWidth
+                parent.scrollWidth === parent.clientWidth &&
+                parent !== docElement
             ) {
                 parent = parent.parentElement;
-                if (parent === docElement) {
-                    break;
-                }
             }
-            return parent;
+
+            /**
+             * If the parent is the body element, we need to dodge it as well.  More efficient to dodge
+             * here than to make another call to `ElementScreenshot.dodgeBodyElement();`
+             */
+            const bodyElement = document.getElementsByTagName("body")[0];
+            return parent === bodyElement ? docElement : parent;
         },
         this.element,
     ) as Promise<WebElement>
@@ -217,5 +233,6 @@ class ElementScreenshot {
 }
 
 export default async function(element: WebElement, elementContent: boolean) {
+    element = await ElementScreenshot.dodgeBodyElement(element);
     return new ElementScreenshot(element, elementContent).take();
 }

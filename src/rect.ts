@@ -84,7 +84,7 @@ export class Rect {
     /**
      * Retrieve the Rect corresponding to the viewport element's bounding box accounting for pixelRatio.
      * The viewport bounding box is defined as the bounding box of the area through which the element's content is
-     * visible. This is found by inserting a temporary child that's the exact client-size of the element.
+     * visible. This is found calculating the .
      * This method uses * `getBoundingClientRect` but will round away subpixel values to the nearest pixel.
      * @param element The `WebElement` to fetch the viewport Rect for.
      */
@@ -96,8 +96,18 @@ export class Rect {
                 const docElement = document.documentElement || document.getElementsByTagName("html")[0];
                 const parent = arguments[0] as Element;
                 const rect = parent.getBoundingClientRect();
-                // Compute the bounding box using a fake element;
-                if (parent !== docElement) {
+
+                // Create fake rect.  If we're the docElement we don't want to use the bounding box offsets.
+                if (parent === docElement) {
+                    return {
+                        bottom: parent.clientHeight,
+                        height: parent.clientHeight,
+                        left: 0,
+                        right: parent.clientWidth,
+                        top: 0,
+                        width: parent.clientWidth,
+                    };
+                } else {
                     return {
                         bottom: rect.top + parent.clientTop + parent.clientHeight,
                         height: parent.clientHeight,
