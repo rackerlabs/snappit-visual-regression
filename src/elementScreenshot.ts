@@ -68,13 +68,6 @@ class ElementScreenshot {
             y: 0,
         };
 
-        /* tslint:disable */
-        console.log({
-            initialRect,
-            viewportRect: viewportRect,
-        });
-        /* tslint:enable */
-
         // Until we've filled up the entire elementScreenshot
         while (cursor.y < initialRect.height) {
             while (cursor.x < initialRect.width) {
@@ -120,19 +113,6 @@ class ElementScreenshot {
                     cursor.x,
                     cursor.y,
                 );
-                /* tslint:disable */
-                console.log({
-                    rect,
-                    bitblt: {
-                        sourceX,
-                        sourceY,
-                        width,
-                        height,
-                        x: cursor.x,
-                        y: cursor.y,
-                    },
-                });
-                /* tslint:enable */
 
                 cursor.x += width;
 
