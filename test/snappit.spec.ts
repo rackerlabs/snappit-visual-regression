@@ -201,7 +201,7 @@ function browserTest(
 
         });
 
-        describe.only("internal scrolling elements", () => {
+        describe("internal scrolling elements", () => {
             before(async () => {
                 config.logException = [ScreenshotExceptionName.NO_BASELINE];
                 snappit = new Snappit(config);
@@ -356,17 +356,17 @@ describe("Snappit", () => {
         browser: "chrome",
     });
 
-    // browserTest("GeckoDriver FireFox", {
-    //     browser: "firefox",
-    // });
+    browserTest("GeckoDriver FireFox", {
+        browser: "firefox",
+    });
 
-    // browserTest("Chrome Headless", {
-    //     browser: "chrome",
-    //     headless: true,
-    // });
+    browserTest("Chrome Headless", {
+        browser: "chrome",
+        headless: true,
+    });
 
-    // browserTest("GeckoDriver FireFox Headless", {
-    //     browser: "firefox",
-    //     headless: true,
-    // });
+    browserTest("GeckoDriver FireFox Headless", {
+        browser: "firefox",
+        headless: true,
+    });
 });
