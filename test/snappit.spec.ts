@@ -202,7 +202,7 @@ function browserTest(
             });
 
             it("should take a screenshot of an element inside a scrolling div", async () => {
-                const imageName = "internal-scroll";
+                const imageName = "internal-scroll.png";
                 const savedImageLocation = `${suitePath}/${imageName}`;
 
                 fs.copyFileSync(originalImageLocation, savedImageLocation);
@@ -210,7 +210,7 @@ function browserTest(
             });
 
             it("should take a screenshot of an element inside a scrolling div with padding", async () => {
-                const imageName = "internal-scroll-padding";
+                const imageName = "internal-scroll-padding.png";
                 const savedImageLocation = `${suitePath}/${imageName}`;
 
                 fs.copyFileSync(originalImageLocation, savedImageLocation);
@@ -218,7 +218,7 @@ function browserTest(
             });
 
             it("should take a screenshot of the content inside a scrolling div", async () => {
-                const imageName = "internal-scroll-content";
+                const imageName = "internal-scroll-content.png";
                 const savedImageLocation = `${suitePath}/${imageName}`;
 
                 fs.copyFileSync(originalImageLocation, savedImageLocation);
