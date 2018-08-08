@@ -18,12 +18,15 @@ class ElementScreenshot {
      * @param element `WebElement` to check for equivalence to `$('body')`.
      */
     public static dodgeBodyElement = (element: WebElement) =>
-        element.getDriver().executeScript(() => {
-            const bodyElement = document.getElementsByTagName("body")[0];
-            const docElement = document.documentElement || document.getElementsByTagName("html")[0];
-            const elem = arguments[0] as Element;
-            return elem === bodyElement ? docElement : elem;
-        }) as Promise<WebElement>
+        element.getDriver().executeScript(
+            () => {
+                const bodyElement = document.getElementsByTagName("body")[0];
+                const docElement = document.documentElement || document.getElementsByTagName("html")[0];
+                const elem = arguments[0] as Element;
+                return elem === bodyElement ? docElement : elem;
+            },
+            element,
+        ) as Promise<WebElement>
 
     private driver: WebDriver;
 
