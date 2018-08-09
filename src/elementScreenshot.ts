@@ -113,6 +113,7 @@ class ElementScreenshot {
                 if (width + cursor.x > initialRect.width) {
                     cursor.x = initialRect.width - width;
                 }
+
                 if (height + cursor.y > initialRect.height) {
                     cursor.y = initialRect.height - height;
                 }
@@ -135,6 +136,7 @@ class ElementScreenshot {
                     cursor.y += height;
                     break;
                 }
+
                 this.scrollToLocation(viewport, initialRect.left + cursor.x, initialRect.top + cursor.y);
             }
             this.scrollToLocation(viewport, initialRect.left + cursor.x, initialRect.top + cursor.y);
@@ -158,7 +160,7 @@ class ElementScreenshot {
                 style.type = "text/css";
                 style.innerText = `
                     *::-webkit-scrollbar { display: none !important; }
-                    *{overflow: -moz-scrollbars-none !important;}
+                    :not(body){overflow: -moz-scrollbars-none !important;}
                 `;
                 head.appendChild(style);
             },

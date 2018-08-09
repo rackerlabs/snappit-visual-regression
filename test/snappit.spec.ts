@@ -1,8 +1,7 @@
 import {expect} from "chai";
 import * as fs from "fs-extra";
-import jimp = require("jimp");
+import { PNG } from "pngjs";
 import {By, WebDriver} from "selenium-webdriver";
-
 import {IConfig} from "../src/config";
 
 import {
@@ -16,10 +15,6 @@ import {$, snap, Snappit} from "../src/snappit";
 
 type ISuiteFn = typeof describe | typeof describe.only | typeof describe.skip;
 
-function compareImages(driver: WebDriver, src: string, dst: string) {
-    /* TODO */
-}
-
 function browserTest(
     suiteName: string,
     config: IConfig,
@@ -29,6 +24,17 @@ function browserTest(
     suiteFn(suiteName, function() {
         let driver: WebDriver;
         let snappit: Snappit;
+
+        async function compareImageDimensions(baseline: string, current: string) {
+            const ratio = (await driver.executeScript(() => window.devicePixelRatio)) as number;
+
+            const originalPng = PNG.sync.read(fs.readFileSync(baseline));
+            const savedPng = PNG.sync.read(fs.readFileSync(current));
+
+            expect(originalPng.width * ratio).to.eql(savedPng.width);
+            expect(originalPng.height * ratio).to.eql(savedPng.height);
+        }
+
         this.timeout(15000);
         this.slow(2500);
 
@@ -156,41 +162,56 @@ function browserTest(
                 await snap("no-difference.png", $("#color-div"));
                 await snap("no-difference.png", $("#color-div"));
             });
+        });
+
+        describe("scrolling elements", () => {
+            const suitePath = `./test/screenshots/${suiteName.split(" ").join("-")}`;
+
+            before(async () => {
+                config.logException = [ScreenshotExceptionName.NO_BASELINE];
+                snappit = new Snappit(config);
+                driver = await snappit.start();
+
+                fs.ensureDirSync(suitePath);
+            });
+
+            after(async () => {
+                await snappit.stop();
+            });
 
             it("should take a snapshot of an element that is too wide", async () => {
                 await driver.get("http://localhost:8080/too-wide");
                 const imageName = "too-wide.png";
-                const originalImageLocation = `./test/public/img/${imageName}`;
-                const savedImageLocation = `${suitePath}/${imageName}`;
+                const baseline = `./test/public/img/${imageName}`;
+                const current = `${suitePath}/${imageName}`;
 
                 await snap(imageName, $("#too-wide"));
-                compareImages(driver, originalImageLocation, savedImageLocation);
+                await compareImageDimensions(baseline, current);
             });
 
             it("should take a snapshot of an element that is too tall", async () => {
                 await driver.get("http://localhost:8080/too-tall");
                 const imageName = "too-tall.png";
-                const originalImageLocation = `./test/public/img/${imageName}`;
-                const savedImageLocation = `${suitePath}/${imageName}`;
+                const baseline = `./test/public/img/${imageName}`;
+                const current = `${suitePath}/${imageName}`;
 
                 await snap(imageName, $("#too-tall"));
-                compareImages(driver, originalImageLocation, savedImageLocation);
+                await compareImageDimensions(baseline, current);
             });
 
             it("should take a snapshot of an element that is too wide and too tall", async () => {
                 await driver.get("http://localhost:8080/too-wide-too-tall");
                 const imageName = "too-wide-too-tall.png";
-                const originalImageLocation = `./test/public/img/${imageName}`;
-                const savedImageLocation = `${suitePath}/${imageName}`;
+                const baseline = `./test/public/img/${imageName}`;
+                const current = `${suitePath}/${imageName}`;
 
                 await snap(imageName, $("#too-wide-too-tall"));
-                compareImages(driver, originalImageLocation, savedImageLocation);
+                await compareImageDimensions(baseline, current);
             });
 
         });
 
         describe("internal scrolling elements", () => {
-            const originalImageLocation = `./test/public/img/test.png`;
             const suitePath = `./test/screenshots/${suiteName.split(" ").join("-")}`;
 
             before(async () => {
@@ -208,26 +229,36 @@ function browserTest(
 
             it("should take a screenshot of an element inside a scrolling div", async () => {
                 const imageName = "internal-scroll.png";
-                const savedImageLocation = `${suitePath}/${imageName}`;
+                const baseline = `./test/public/img/test.png`;
+                const current = `${suitePath}/${imageName}`;
 
                 await snap(imageName, $("#scroll"));
-                compareImages(driver, originalImageLocation, savedImageLocation);
+                await compareImageDimensions(baseline, current);
             });
 
             it("should take a screenshot of an element inside a scrolling div with padding", async () => {
                 const imageName = "internal-scroll-padding.png";
-                const savedImageLocation = `${suitePath}/${imageName}`;
+                const baseline = `./test/public/img/test.png`;
+                const current = `${suitePath}/${imageName}`;
 
                 await snap(imageName, $("#scroll-padding"));
-                compareImages(driver, originalImageLocation, savedImageLocation);
+                await compareImageDimensions(baseline, current);
             });
 
             it("should take a screenshot of the content inside a scrolling div", async () => {
                 const imageName = "internal-scroll-content.png";
-                const savedImageLocation = `${suitePath}/${imageName}`;
+                const baseline = `./test/public/img/test.png`;
+                const current = `${suitePath}/${imageName}`;
 
                 await snap(imageName, $("#scroll-content"), {elementContent: true});
-                compareImages(driver, originalImageLocation, savedImageLocation);
+
+                const ratio = (await driver.executeScript(() => window.devicePixelRatio)) as number;
+
+                const originalPng = PNG.sync.read(fs.readFileSync(baseline));
+                const savedPng = PNG.sync.read(fs.readFileSync(current));
+
+                expect(originalPng.width * ratio).to.eql(savedPng.width);
+                expect(originalPng.height * ratio).to.be.lessThan(savedPng.height);
             });
         });
 

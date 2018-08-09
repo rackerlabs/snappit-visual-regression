@@ -1,12 +1,25 @@
-
 import { WebElement } from "selenium-webdriver";
 
 // Provides an array whose member types are deterministic at compile time.
 class StringArray<T extends string> extends Array<T> {}
 
+// Types
+interface IScrollRect {
+    height: number;
+    width: number;
+}
+interface IClientRect extends IScrollRect {
+    left: number;
+    top: number;
+}
+interface IRect extends IClientRect {
+    bottom: number;
+    right: number;
+}
+
 const RECT_KEYS = new StringArray("bottom", "height", "left", "right", "top", "width");
 
-export class Rect {
+export class Rect implements IRect {
     public bottom = 0;
     public height = 0;
     public left = 0;
@@ -20,10 +33,10 @@ export class Rect {
     public duplicate() {
         const newRect = new Rect();
 
-        // Copy the previous rect.
         for (const key of RECT_KEYS) {
             newRect[key] = this[key];
         }
+
         return newRect;
     }
 
@@ -33,24 +46,9 @@ export class Rect {
      * @param element The `WebElement` to fetch the Rect for.
      */
     public async forElement(element: WebElement) {
-        const newRect = new Rect();
+        const clientRect = await this.getBoundingRect(element);
 
-        const clientRect = await element.getDriver().executeScript(
-            () => (arguments[0] as Element).getBoundingClientRect(),
-            element,
-        ) as ClientRect;
-
-        // Copy relevent fields and transform to whole pixels.
-        for (const key of RECT_KEYS) {
-            newRect[key] = Math.round(clientRect[key]);
-        }
-
-        // Set the pixelRatio.
-        const pixelRatio = await element.getDriver().executeScript(
-            () => window.devicePixelRatio,
-        ) as number;
-
-        return newRect.withPixelRatio(pixelRatio);
+        return (this.duplicate.apply(clientRect) as Rect).round();
     }
 
     /**
@@ -61,116 +59,137 @@ export class Rect {
      */
     public async forElementContent(element: WebElement) {
         const newRect = await this.forViewportElement(element);
+        const scrollRect = await this.getScrollRect(element);
 
-        const scrollRect = await element.getDriver().executeScript(
-            () => {
-                const parent = arguments[0] as Element;
-                return {
-                    height: Math.round(parent.scrollHeight),
-                    width: Math.round(parent.scrollWidth),
-                };
-            },
-            element,
-        ) as ClientRect;
-
+        newRect.bottom = newRect.top  + scrollRect.height;
+        newRect.right  = newRect.left + scrollRect.width;
         newRect.height = scrollRect.height;
-        newRect.width = scrollRect.width;
-        newRect.bottom = newRect.top + scrollRect.height;
-        newRect.right = newRect.left + scrollRect.width;
+        newRect.width  = scrollRect.width;
 
-        // Set the pixelRatio.
-        const pixelRatio = await element.getDriver().executeScript(
-            () => window.devicePixelRatio,
-        ) as number;
-
-        return newRect.withPixelRatio(pixelRatio);
+        return newRect.round();
     }
 
     /**
      * Retrieve the Rect corresponding to the viewport element's bounding box accounting for pixelRatio.
      * The viewport bounding box is defined as the bounding box of the area through which the element's content is
      * visible. This is found calculating the .
-     * This method uses * `getBoundingClientRect` but will round away subpixel values to the nearest pixel.
      * @param element The `WebElement` to fetch the viewport Rect for.
      */
     public async forViewportElement(element: WebElement) {
         const newRect = new Rect();
 
-        const clientRect = await element.getDriver().executeScript(
-            () => {
-                const docElement = document.documentElement || document.getElementsByTagName("html")[0];
-                const parent = arguments[0] as Element;
-                const rect = parent.getBoundingClientRect();
-
-                // Create fake rect.  If we're the docElement we don't want to use the bounding box offsets.
-                if (parent === docElement) {
-                    return {
-                        bottom: parent.clientHeight,
-                        height: parent.clientHeight,
-                        left: 0,
-                        right: parent.clientWidth,
-                        top: 0,
-                        width: parent.clientWidth,
-                    };
-                } else {
-                    return {
-                        bottom: rect.top + parent.clientTop + parent.clientHeight,
-                        height: parent.clientHeight,
-                        left: rect.left + parent.clientLeft,
-                        right: rect.left + parent.clientLeft + parent.clientWidth,
-                        top: rect.top + parent.clientTop,
-                        width: parent.clientWidth,
-                    };
-                }
-                return rect;
-            },
-            element,
-        ) as ClientRect;
-
-        // Copy relevent fields and transform to whole pixels.
-        for (const key of RECT_KEYS) {
-            newRect[key] = Math.round(clientRect[key]);
+        const {left, top, height, width} = await this.getClientRect(element);
+        if (await this.isDocElement(element)) {
+            newRect.left    = 0;
+            newRect.top     = 0;
+            newRect.right   = newRect.width = width;
+            newRect.bottom  = newRect.height = height;
+        } else {
+            const rect = await this.getBoundingRect(element);
+            newRect.height  = height;
+            newRect.width   = width;
+            newRect.top     = rect.top + top;
+            newRect.bottom  = rect.top + top + height;
+            newRect.left    = rect.left + left;
+            newRect.right   = rect.left + left + width;
         }
 
-        // Set the pixelRatio.
-        const pixelRatio = await element.getDriver().executeScript(
-            () => window.devicePixelRatio,
-        ) as number;
-
-        return newRect.withPixelRatio(pixelRatio);
+        return newRect.round();
     }
 
     /**
-     * Set the device pixel ratio for multiplying pixel values.
-     * @param pixelRatio The device's pixel ratio
+     * Transform position to relative pixels by the reference point (left, top).
+     * @param rect `Rect` object containing the top, left coordinates.
      */
     public relativeTo({left, top}: Rect) {
-        const newRect = new Rect();
+        const newRect = this.duplicate();
 
-        // Copy the previous rect.
-        for (const key of RECT_KEYS) {
-            newRect[key] = this[key];
-        }
-
-        // Transform position to relative pixels by the reference point (left, top).
-        newRect.left -= left;
-        newRect.right = newRect.left + newRect.width;
-        newRect.top -= top;
-        newRect.bottom = newRect.top + newRect.height;
+        newRect.top     -= top;
+        newRect.bottom  -= top;
+        newRect.left    -= left;
+        newRect.right   -= left;
 
         return newRect;
     }
 
     /**
-     * Set the device pixel ratio for multiplying pixel values.
-     * @param pixelRatio The device's pixel ratio
+     * Wraps getBoundingClientRect.
+     * @param element `WebElement` to retrieve the rect for.
      */
-    public withPixelRatio(pixelRatio: number) {
+    private getBoundingRect = async (element: WebElement) =>
+        element.getDriver().executeScript(
+            () => {
+                const rect = (arguments[0] as Element).getBoundingClientRect();
+                const ratio = window.devicePixelRatio;
+                return {
+                    bottom: ratio * rect.bottom,
+                    height: ratio * rect.height,
+                    left:   ratio * rect.left,
+                    right:  ratio * rect.right,
+                    top:    ratio * rect.top,
+                    width:  ratio * rect.width,
+                };
+            },
+            element,
+        ) as Promise<IRect>
+
+    /**
+     * Returns the client dimensions and offsets.
+     * @param element `WebElement` to retrieve the rect for.
+     */
+    private getClientRect = async (element: WebElement) =>
+        element.getDriver().executeScript(
+            () => {
+                const elem = arguments[0] as Element;
+                const ratio = window.devicePixelRatio;
+                return {
+                    height: ratio * elem.clientHeight,
+                    left:   ratio * elem.clientLeft,
+                    top:    ratio * elem.clientTop,
+                    width:  ratio * elem.clientWidth,
+                };
+            },
+            element,
+        ) as Promise<IClientRect>
+
+    /**
+     * Returns the scroll offsets.
+     * @param element `WebElement` to retrieve the rect for.
+     */
+    private getScrollRect = async (element: WebElement) =>
+        element.getDriver().executeScript(
+            () => {
+                const elem = arguments[0] as Element;
+                const ratio = window.devicePixelRatio;
+                return {
+                    height: ratio * elem.scrollHeight,
+                    width:  ratio * elem.scrollWidth,
+                };
+            },
+            element,
+        ) as Promise<IScrollRect>
+
+    /**
+     * Determines if an element is the document element.
+     * @param element `WebElement` to test.
+     */
+    private isDocElement = async (element: WebElement) =>
+        element.getDriver().executeScript(
+            () => {
+                const docElement = document.documentElement || document.getElementsByTagName("html")[0];
+                return arguments[0] === docElement;
+            },
+            element,
+        ) as Promise<boolean>
+
+    /**
+     * Round all of the Rect keys.
+     */
+    private round() {
         const newRect = new Rect();
 
-        // Transform to whole pixels.
         for (const key of RECT_KEYS) {
-            newRect[key] = Math.round(this[key]) * pixelRatio;
+            newRect[key] = Math.round(this[key]);
         }
 
         return newRect;
