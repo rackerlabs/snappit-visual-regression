@@ -251,14 +251,7 @@ function browserTest(
                 const current = `${suitePath}/${imageName}`;
 
                 await snap(imageName, $("#scroll-content"), {elementContent: true});
-
-                const ratio = (await driver.executeScript(() => window.devicePixelRatio)) as number;
-
-                const originalPng = PNG.sync.read(fs.readFileSync(baseline));
-                const savedPng = PNG.sync.read(fs.readFileSync(current));
-
-                expect(originalPng.width * ratio).to.eql(savedPng.width);
-                expect(originalPng.height * ratio).to.be.lessThan(savedPng.height);
+                await compareImageDimensions(baseline, current);
             });
         });
 
