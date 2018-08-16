@@ -219,8 +219,6 @@ function browserTest(
                 snappit = new Snappit(config);
                 driver = await snappit.start();
                 await driver.get("http://localhost:8080/internal-scroll.html");
-
-                fs.ensureDirSync(suitePath);
             });
 
             after(async () => {
