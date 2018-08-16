@@ -72,7 +72,7 @@ export class Rect implements IRect {
     /**
      * Retrieve the Rect corresponding to the viewport element's bounding box accounting for pixelRatio.
      * The viewport bounding box is defined as the bounding box of the area through which the element's content is
-     * visible. This is found calculating the .
+     * visible. This is found by adjusting the element's boundingRect by it's clientRect.
      * @param element The `WebElement` to fetch the viewport Rect for.
      */
     public async forViewportElement(element: WebElement) {

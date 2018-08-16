@@ -15,7 +15,6 @@ import {
 import {
     NoDriverSessionException,
     ScreenshotException,
-    ScreenshotExceptionName,
     ScreenshotMismatchException,
     ScreenshotNoBaselineException,
     ScreenshotSizeDifferenceException,
@@ -135,20 +134,21 @@ export class Snappit {
     public async snap(
         name: string,
         element?: WebElement,
-        opts?: ISnapOptions,
+        {
+            elementContent = false,
+            hide = [],
+        }: ISnapOptions = {},
     ): Promise<void> {
-        opts = _.defaults(opts, { elementContent: false, hide: []});
-
         const filePath = await Screenshot.buildPath(name, this.driver, this.config.screenshotsDir);
         const shortPath = path.relative(process.cwd(), filePath);
-        if (opts.hide.length) {
-            await blackout.hideElements(this.driver, opts.hide);
+        if (hide.length) {
+            await blackout.hideElements(this.driver, hide);
         }
 
-        const newShot = await Screenshot.take(this.driver, element, opts.elementContent);
+        const newShot = await Screenshot.take(this.driver, element, elementContent);
 
-        if (opts.hide.length) {
-            await blackout.unhideElements(this.driver, opts.hide);
+        if (hide.length) {
+            await blackout.unhideElements(this.driver, hide);
         }
 
         // Baseline image exists

@@ -13,21 +13,6 @@ const SVR_ID = "added-by-snappit-visual-regression";
  * Class for an Element Screenshot.
  */
 class ElementScreenshot {
-    /**
-     * The body element presents a few problems, so we just skip over it and return docElement instead.
-     * @param element `WebElement` to check for equivalence to `$('body')`.
-     */
-    public static dodgeBodyElement = (element: WebElement) =>
-        element.getDriver().executeScript(
-            () => {
-                const bodyElement = document.getElementsByTagName("body")[0];
-                const docElement = document.documentElement || document.getElementsByTagName("html")[0];
-                const elem = arguments[0] as Element;
-                return elem === bodyElement ? docElement : elem;
-            },
-            element,
-        ) as Promise<WebElement>
-
     private driver: WebDriver;
 
     /**
@@ -192,8 +177,7 @@ class ElementScreenshot {
             }
 
             /**
-             * If the parent is the body element, we need to dodge it as well.  More efficient to dodge
-             * here than to make another call to `ElementScreenshot.dodgeBodyElement();`
+             * If the parent is the body element, we need to dodge it.
              */
             const bodyElement = document.getElementsByTagName("body")[0];
             return parent === bodyElement ? docElement : parent;
@@ -238,6 +222,13 @@ class ElementScreenshot {
 }
 
 export default async function(element: WebElement, elementContent: boolean) {
-    element = await ElementScreenshot.dodgeBodyElement(element);
+    /**
+     * We want to use the documentElement, a.k.a. html tag, instead of the body tag if that is passed.  The
+     * body tag does not properly handle scrolling, and is essentially the same for the purposes of computing
+     * the area to screenshot.
+     */
+    if ((await element.getTagName()).toLowerCase() === "body") {
+        element = $("html");
+    }
     return new ElementScreenshot(element, elementContent).take();
 }
