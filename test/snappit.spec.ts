@@ -124,8 +124,6 @@ function browserTest(
                 snappit = new Snappit(config);
                 driver = await snappit.start();
                 await driver.get("http://localhost:8080/");
-
-                fs.ensureDirSync(suitePath);
             });
 
             after(async () => {
@@ -171,8 +169,6 @@ function browserTest(
                 config.logException = [ScreenshotExceptionName.NO_BASELINE];
                 snappit = new Snappit(config);
                 driver = await snappit.start();
-
-                fs.ensureDirSync(suitePath);
             });
 
             after(async () => {
