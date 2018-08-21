@@ -1,17 +1,11 @@
-import * as childProcess from "child_process";
-
 import {expect} from "chai";
 import * as fs from "fs-extra";
-import * as _ from "lodash";
-import * as path from "path";
-import {PNG} from "pngjs";
-import {By, ISize, WebDriver, WebElementPromise} from "selenium-webdriver";
-
-import {IConfig, ISnappitConfig} from "../src/config";
+import { PNG } from "pngjs";
+import {By, WebDriver} from "selenium-webdriver";
+import {IConfig} from "../src/config";
 
 import {
     NoDriverSessionException,
-    ScreenshotException,
     ScreenshotExceptionName,
     ScreenshotMismatchException,
     ScreenshotNoBaselineException,
@@ -30,6 +24,17 @@ function browserTest(
     suiteFn(suiteName, function() {
         let driver: WebDriver;
         let snappit: Snappit;
+
+        async function compareImageDimensions(baseline: string, current: string) {
+            const ratio = (await driver.executeScript(() => window.devicePixelRatio)) as number;
+
+            const originalPng = PNG.sync.read(fs.readFileSync(baseline));
+            const savedPng = PNG.sync.read(fs.readFileSync(current));
+
+            expect(originalPng.width * ratio).to.eql(savedPng.width);
+            expect(originalPng.height * ratio).to.eql(savedPng.height);
+        }
+
         this.timeout(15000);
         this.slow(2500);
 
@@ -112,14 +117,13 @@ function browserTest(
         });
 
         describe("screenshots", () => {
-            let devicePixelRatio: number;
+            const suitePath = `./test/screenshots/${suiteName.split(" ").join("-")}`;
 
             before(async () => {
                 config.logException = [ScreenshotExceptionName.NO_BASELINE];
                 snappit = new Snappit(config);
                 driver = await snappit.start();
                 await driver.get("http://localhost:8080/");
-                devicePixelRatio = await driver.executeScript("return window.devicePixelRatio") as number;
             });
 
             after(async () => {
@@ -156,49 +160,93 @@ function browserTest(
                 await snap("no-difference.png", $("#color-div"));
                 await snap("no-difference.png", $("#color-div"));
             });
+        });
+
+        describe("scrolling elements", () => {
+            const suitePath = `./test/screenshots/${suiteName.split(" ").join("-")}`;
+
+            before(async () => {
+                config.logException = [ScreenshotExceptionName.NO_BASELINE];
+                snappit = new Snappit(config);
+                driver = await snappit.start();
+            });
+
+            after(async () => {
+                await snappit.stop();
+            });
 
             it("should take a snapshot of an element that is too wide", async () => {
                 await driver.get("http://localhost:8080/too-wide");
                 const imageName = "too-wide.png";
-                const originalImageLocation = `./test/public/img/${imageName}`;
-                const savedImageLocation = `./test/screenshots/${suiteName.split(" ").join("-")}/${imageName}`;
+                const baseline = `./test/public/img/${imageName}`;
+                const current = `${suitePath}/${imageName}`;
 
                 await snap(imageName, $("#too-wide"));
-                const originalPng = PNG.sync.read(fs.readFileSync(originalImageLocation));
-                const savedPng = PNG.sync.read(fs.readFileSync(savedImageLocation));
-
-                expect(originalPng.width * devicePixelRatio).to.eql(savedPng.width);
-                expect(originalPng.height * devicePixelRatio).to.eql(savedPng.height);
+                await compareImageDimensions(baseline, current);
             });
 
             it("should take a snapshot of an element that is too tall", async () => {
                 await driver.get("http://localhost:8080/too-tall");
                 const imageName = "too-tall.png";
-                const originalImageLocation = `./test/public/img/${imageName}`;
-                const savedImageLocation = `./test/screenshots/${suiteName.split(" ").join("-")}/${imageName}`;
+                const baseline = `./test/public/img/${imageName}`;
+                const current = `${suitePath}/${imageName}`;
 
                 await snap(imageName, $("#too-tall"));
-                const originalPng = PNG.sync.read(fs.readFileSync(originalImageLocation));
-                const savedPng = PNG.sync.read(fs.readFileSync(savedImageLocation));
-
-                expect(originalPng.width * devicePixelRatio).to.eql(savedPng.width);
-                expect(originalPng.height * devicePixelRatio).to.eql(savedPng.height);
+                await compareImageDimensions(baseline, current);
             });
 
             it("should take a snapshot of an element that is too wide and too tall", async () => {
                 await driver.get("http://localhost:8080/too-wide-too-tall");
                 const imageName = "too-wide-too-tall.png";
-                const originalImageLocation = `./test/public/img/${imageName}`;
-                const savedImageLocation = `./test/screenshots/${suiteName.split(" ").join("-")}/${imageName}`;
+                const baseline = `./test/public/img/${imageName}`;
+                const current = `${suitePath}/${imageName}`;
 
                 await snap(imageName, $("#too-wide-too-tall"));
-                const originalPng = PNG.sync.read(fs.readFileSync(originalImageLocation));
-                const savedPng = PNG.sync.read(fs.readFileSync(savedImageLocation));
-
-                expect(originalPng.width * devicePixelRatio).to.eql(savedPng.width);
-                expect(originalPng.height * devicePixelRatio).to.eql(savedPng.height);
+                await compareImageDimensions(baseline, current);
             });
 
+        });
+
+        describe("internal scrolling elements", () => {
+            const suitePath = `./test/screenshots/${suiteName.split(" ").join("-")}`;
+
+            before(async () => {
+                config.logException = [ScreenshotExceptionName.NO_BASELINE];
+                snappit = new Snappit(config);
+                driver = await snappit.start();
+                await driver.get("http://localhost:8080/internal-scroll.html");
+            });
+
+            after(async () => {
+                await snappit.stop();
+            });
+
+            it("should take a screenshot of an element inside a scrolling div", async () => {
+                const imageName = "internal-scroll.png";
+                const baseline = `./test/public/img/test.png`;
+                const current = `${suitePath}/${imageName}`;
+
+                await snap(imageName, $("#scroll"));
+                await compareImageDimensions(baseline, current);
+            });
+
+            it("should take a screenshot of an element inside a scrolling div with padding", async () => {
+                const imageName = "internal-scroll-padding.png";
+                const baseline = `./test/public/img/test.png`;
+                const current = `${suitePath}/${imageName}`;
+
+                await snap(imageName, $("#scroll-padding"));
+                await compareImageDimensions(baseline, current);
+            });
+
+            it("should take a screenshot of the content inside a scrolling div", async () => {
+                const imageName = "internal-scroll-content.png";
+                const baseline = `./test/public/img/test.png`;
+                const current = `${suitePath}/${imageName}`;
+
+                await snap(imageName, $("#scroll-content"), {elementContent: true});
+                await compareImageDimensions(baseline, current);
+            });
         });
 
         describe("blacking out elements", () => {

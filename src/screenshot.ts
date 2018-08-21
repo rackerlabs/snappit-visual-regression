@@ -3,10 +3,6 @@ import * as path from "path";
 
 import { PNG } from "pngjs";
 import {
-    By,
-    error as WebDriverError,
-    ILocation,
-    ISize,
     WebDriver,
     WebElement,
 } from "selenium-webdriver";
@@ -42,9 +38,10 @@ export class Screenshot {
     public static async take(
         driver: WebDriver,
         element?: WebElement,
+        elementContent?: boolean,
     ): Promise<Screenshot> {
         if (element) {
-            return new Screenshot(await elementScreenshot(element));
+            return new Screenshot(await elementScreenshot(element, elementContent));
         } else {
             return new Screenshot(new Buffer(await driver.takeScreenshot(), "base64"));
         }

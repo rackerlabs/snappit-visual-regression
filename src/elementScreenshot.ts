@@ -1,62 +1,71 @@
-import * as _ from "lodash";
 import { PNG } from "pngjs";
 import {
     ILocation,
-    ISize,
     WebDriver,
     WebElement,
 } from "selenium-webdriver";
+import { Rect } from "./rect";
+import { $ } from "./snappit";
 
 const SVR_ID = "added-by-snappit-visual-regression";
 
-interface IScrollbarOffsets {
-    horizontal: number;
-    vertical: number;
-}
-
-// TSLint doesn't understand the new 2.8 mapped type modifiers
-/* tslint:disable */
-type MutableClientRect = {
-    -readonly [P in keyof ClientRect]: ClientRect[P];
-}
-/* tslint:enable */
-
+/**
+ * Class for an Element Screenshot.
+ */
 class ElementScreenshot {
     private driver: WebDriver;
-    private element: WebElement;
-    private devicePixelRatio: number;
 
+    /**
+     * Creates a new `ElementScreenshot` object.
+     * @param element `WebElement` to screenshot, or whose contents to screenshot (see below).
+     * @param elementContent `boolean` indicating whether or not screenshot the element's contents instead,
+     *   only valid for scrolling elements.
+     */
     constructor(
-        element: WebElement,
+        private element: WebElement,
+        private elementContent: boolean = false,
     ) {
         this.driver = element.getDriver();
-        this.element = element;
     }
-
-    public async prepare() {
-        this.devicePixelRatio = await this.getDevicePixelRatio();
-        return this;
-    }
-
+    /**
+     * Takes the element screenshot.
+     *
+     * If `this.elementContent` is set to true, the element will be used as a viewport and the elements contents
+     * will be screenshotted instead.
+     */
     public async take() {
         // Drop scrollbars
         await this.dropScrollbars();
 
-        // Position the element on screen, this is guaranteed to get the top-left corner of the element on screen.
-        await this.scrollToLocation(0, 0);
-        const initialRect = await this.getBoundingClientRect();
-        await this.scrollToLocation(initialRect.left, initialRect.top);
+        // Get viewport
+        const viewport = this.elementContent
+            ? this.element
+            : await this.getViewportElement();
+
+        const viewportRect = await new Rect().forViewportElement(viewport);
+
+        /* Position the element in the viewport by scrolling to the top left of the viewport, then attempting to
+         * scroll the viewport to the relative top left of the element.  Since scrolling is based on the viewport
+         * element, we'll adjust the initial position to be relative to the viewport.
+         */
+        await this.scrollToLocation(viewport, 0, 0);
+        const initialRect = this.elementContent
+            ? (await new Rect().forElementContent(this.element)).relativeTo(viewportRect)
+            : (await new Rect().forElement(this.element)).relativeTo(viewportRect);
+
+        await this.scrollToLocation(
+            viewport,
+            initialRect.left,
+            initialRect.top,
+        );
 
         // Create base screenshot.
-        const elementScreenshot = new PNG(initialRect);
+        const elementScreenshot = new PNG(initialRect.duplicate());
 
         const cursor: ILocation = {
             x: 0,
             y: 0,
         };
-
-        // Find out which sides we have scrollbars on and get offsets for those bars.
-        const scrollbarOffsets = await this.getScrollbarOffsets();
 
         // Until we've filled up the entire elementScreenshot
         while (cursor.y < initialRect.height) {
@@ -64,27 +73,32 @@ class ElementScreenshot {
 
                 // Take a new screenshot at the current location
                 const screenshot = await this.screenshot();
-                const rect = await this.getBoundingClientRect();
+                const rect = this.elementContent
+                    ? (await new Rect().forElementContent(this.element))
+                    : await new Rect().forElement(this.element);
 
                 /**
-                 *  Given the offset information in rect, determine the intersection with the current screenshot.
-                 *    rect.left/.top represent the left and top coordinates relative to the viewport.  If they are
-                 *    negative then the element's origin is above or to the left of the current screenshot, so we need
-                 *    to start from zero.
+                 * Given the offset information in rect, determine the intersection with the current viewport's
+                 * position on the screen.
                  *
-                 *    width/height are either going to be the total width of the screenshot, adjusting for scrollbars
-                 *    or the rect.right/.bottom offset of the element.  In either case, we must subtract the sourceX/Y
-                 *    coordinates.
+                 * The formula for the intersection of two rectangles is the max of the left and top offsets,
+                 * and the min of the right and bottom offsets.
+                 *
+                 * To find the width and the height, we have to subtract top from bottom, left from right.
                  */
-                const sourceX = rect.left > 0 ? rect.left : 0;
-                const sourceY = rect.top > 0 ? rect.top : 0;
-                const width = Math.min(rect.right, screenshot.width - scrollbarOffsets.horizontal) - sourceX;
-                const height = Math.min(rect.bottom, screenshot.height - scrollbarOffsets.vertical) - sourceY;
+                const sourceX = Math.max(rect.left, viewportRect.left);
+                const sourceY = Math.max(rect.top, viewportRect.top);
+                const width = Math.min(rect.right, viewportRect.right) - sourceX;
+                const height = Math.min(rect.bottom, viewportRect.bottom) - sourceY;
 
-                // If we would overwrite width/height by too much, adjust the cursor.
+                /**
+                 * If we would overwrite width/height by too much, adjust the cursor.  This is slightly less
+                 * efficient but conceptually simpler than adjusting the source and width.
+                 */
                 if (width + cursor.x > initialRect.width) {
                     cursor.x = initialRect.width - width;
                 }
+
                 if (height + cursor.y > initialRect.height) {
                     cursor.y = initialRect.height - height;
                 }
@@ -107,9 +121,10 @@ class ElementScreenshot {
                     cursor.y += height;
                     break;
                 }
-                this.scrollToLocation(initialRect.left + cursor.x, initialRect.top + cursor.y);
+
+                this.scrollToLocation(viewport, initialRect.left + cursor.x, initialRect.top + cursor.y);
             }
-            this.scrollToLocation(initialRect.left + cursor.x, initialRect.top + cursor.y);
+            this.scrollToLocation(viewport, initialRect.left + cursor.x, initialRect.top + cursor.y);
         }
 
         // Restore scrollbars
@@ -118,9 +133,9 @@ class ElementScreenshot {
         return elementScreenshot;
     }
 
-    private getDevicePixelRatio = () =>
-        this.driver.executeScript(() => window.devicePixelRatio) as Promise<number>
-
+    /**
+     * Drops scrollbars in all modern browsers.
+     */
     private dropScrollbars = () =>
         this.driver.executeScript(
             () => {
@@ -128,7 +143,10 @@ class ElementScreenshot {
                 const style = document.createElement("style");
                 style.id = arguments[0];
                 style.type = "text/css";
-                style.innerText = "::-webkit-scrollbar { display: none; }";
+                style.innerText = `
+                    *::-webkit-scrollbar { display: none !important; }
+                    :not(body){overflow: -moz-scrollbars-none !important;}
+                `;
                 head.appendChild(style);
             },
             SVR_ID,
@@ -138,36 +156,38 @@ class ElementScreenshot {
         }) as Promise<void>
 
     /**
-     * Retrieve the element's bounding box accounting for devicePixelRatio.  Note that this may result
-     * in partial pixels. Change to round here to fix a math error related to very large fractions in the
-     * bounding box sometimes tipping over when the screen is scrolled.
+     * Retrieve the element's viewport element.  If there is no parent return the doc element.
      */
-    private getBoundingClientRect = async () => {
-        const rect = await this.driver.executeScript(
-            () => (arguments[0] as Element).getBoundingClientRect(),
-            this.element,
-        ) as ClientRect;
-
-        // Transform to integers.
-        const floor: MutableClientRect = rect;
-        for (const key of Object.keys(rect) as Array<keyof ClientRect>) {
-            floor[key] = Math.round(rect[key]) * this.devicePixelRatio;
-        }
-        return floor;
-    }
-
-    private getScrollbarOffsets = () =>
+    private getViewportElement = async () =>
         this.driver.executeScript(
-            () => {
-                const docElement = document.documentElement || document.getElementsByTagName("html")[0];
-                return {
-                    horizontal: docElement.scrollWidth > docElement.clientWidth ? 15 * arguments[0] : 0,
-                    vertical: docElement.scrollHeight > docElement.clientHeight ? 15 * arguments[0] : 0,
-                };
-            },
-            this.devicePixelRatio,
-        ) as Promise<IScrollbarOffsets>
+        () => {
+            const docElement = document.documentElement || document.getElementsByTagName("html")[0];
+            let parent = (arguments[0] as Element).parentElement;
 
+            if (!parent) {
+                return docElement;
+            }
+
+            while (
+                parent.scrollHeight === parent.clientHeight &&
+                parent.scrollWidth === parent.clientWidth &&
+                parent !== docElement
+            ) {
+                parent = parent.parentElement;
+            }
+
+            /**
+             * If the parent is the body element, we need to dodge it.
+             */
+            const bodyElement = document.getElementsByTagName("body")[0];
+            return parent === bodyElement ? docElement : parent;
+        },
+        this.element,
+    ) as Promise<WebElement>
+
+    /**
+     * Undo the drop scrollbars style.
+     */
     private removeDropScrollbars = () =>
         this.driver.executeScript(
             () => document.getElementById(arguments[0]).remove(),
@@ -178,13 +198,22 @@ class ElementScreenshot {
         }) as Promise<void>
 
     /**
-     * Scroll to the specified location on screen accounting for devicePixelRatio.
+     * Scroll to the specified location on screen accounting for devicePixelRatio.  This method assumes viewport
+     * coordinates, so you will need to adjust your inputs appropriately.
      */
-    private scrollToLocation = (left: number, top: number) =>
+    private scrollToLocation = (viewport: WebElement, left: number, top: number) =>
         this.driver.executeScript(
-            () => window.scrollTo(arguments[0], arguments[1]),
-            left / this.devicePixelRatio,
-            top / this.devicePixelRatio,
+            () => {
+                const pixelRatio = window.devicePixelRatio;
+                const x = arguments[1] / pixelRatio;
+                const y = arguments[2] / pixelRatio;
+                const element = (arguments[0] as Element);
+
+                element.scrollTo(x, y);
+            },
+            viewport,
+            left,
+            top,
         ) as Promise<void>
 
     private async screenshot() {
@@ -192,6 +221,14 @@ class ElementScreenshot {
     }
 }
 
-export default async function(element: WebElement) {
-    return (await new ElementScreenshot(element).prepare()).take();
+export default async function(element: WebElement, elementContent: boolean) {
+    /**
+     * We want to use the documentElement, a.k.a. html tag, instead of the body tag if that is passed.  The
+     * body tag does not properly handle scrolling, and is essentially the same for the purposes of computing
+     * the area to screenshot.
+     */
+    if ((await element.getTagName()).toLowerCase() === "body") {
+        element = $("html");
+    }
+    return new ElementScreenshot(element, elementContent).take();
 }

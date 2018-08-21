@@ -1,9 +1,8 @@
 import * as fs from "fs-extra";
 import * as _ from "lodash";
 import * as path from "path";
-import {PNG} from "pngjs";
 import {
-    By, error as WebDriverError,
+    By,
     WebDriver, WebElement,
 } from "selenium-webdriver";
 
@@ -16,7 +15,6 @@ import {
 import {
     NoDriverSessionException,
     ScreenshotException,
-    ScreenshotExceptionName,
     ScreenshotMismatchException,
     ScreenshotNoBaselineException,
     ScreenshotSizeDifferenceException,
@@ -34,6 +32,7 @@ import {Screenshot} from "./screenshot";
 let shorthandInstance: Snappit;
 
 export interface ISnapOptions {
+    elementContent?: boolean;
     hide?: WebElement[];
 }
 
@@ -41,6 +40,7 @@ export async function snap(
     name: string,
     element?: WebElement,
     opts: ISnapOptions = {
+        elementContent: false,
         hide: [],
     },
 ): Promise<void> {
@@ -134,20 +134,21 @@ export class Snappit {
     public async snap(
         name: string,
         element?: WebElement,
-        opts: ISnapOptions = {
-            hide: [],
-        },
+        {
+            elementContent = false,
+            hide = [],
+        }: ISnapOptions = {},
     ): Promise<void> {
         const filePath = await Screenshot.buildPath(name, this.driver, this.config.screenshotsDir);
         const shortPath = path.relative(process.cwd(), filePath);
-        if (opts.hide.length) {
-            await blackout.hideElements(this.driver, opts.hide);
+        if (hide.length) {
+            await blackout.hideElements(this.driver, hide);
         }
 
-        const newShot = await Screenshot.take(this.driver, element);
+        const newShot = await Screenshot.take(this.driver, element, elementContent);
 
-        if (opts.hide.length) {
-            await blackout.unhideElements(this.driver, opts.hide);
+        if (hide.length) {
+            await blackout.unhideElements(this.driver, hide);
         }
 
         // Baseline image exists
