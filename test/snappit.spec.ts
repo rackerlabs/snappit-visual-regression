@@ -247,6 +247,15 @@ function browserTest(
                 await snap(imageName, $("#scroll-content"), {elementContent: true});
                 await compareImageDimensions(baseline, current);
             });
+
+            it("should take a screenshot of an absolutely positioned element", async () => {
+                const imageName = "internal-scroll-absolute.png";
+                const baseline = `./test/public/img/test.png`;
+                const current = `${suitePath}/${imageName}`;
+
+                await snap(imageName, $("#scroll-absolute"));
+                await compareImageDimensions(baseline, current);
+            });
         });
 
         describe("blacking out elements", () => {
