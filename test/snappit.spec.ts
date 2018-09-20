@@ -207,7 +207,7 @@ function browserTest(
 
         });
 
-        describe.only("internal scrolling elements", () => {
+        describe("internal scrolling elements", () => {
             const suitePath = `./test/screenshots/${suiteName.split(" ").join("-")}`;
 
             before(async () => {
