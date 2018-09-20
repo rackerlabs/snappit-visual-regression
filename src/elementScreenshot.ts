@@ -157,22 +157,31 @@ class ElementScreenshot {
 
     /**
      * Retrieve the element's viewport element.  If there is no parent return the doc element.
+     * This attempts to handle fixed or absolute positioned elements by falling back to the
+     * doc element as parent.
      */
     private getViewportElement = async () =>
         this.driver.executeScript(
         () => {
-            const docElement = document.documentElement || document.getElementsByTagName("html")[0];
-            let parent = (arguments[0] as Element).parentElement;
+            const isScrollable = (elem: HTMLElement) =>
+                elem.scrollHeight !== elem.clientHeight ||
+                elem.scrollWidth !== elem.clientWidth;
 
-            if (!parent) {
+            const isAbsolute = (elem: HTMLElement) =>
+                ["absolute", "fixed"].indexOf(window.getComputedStyle(elem).position) !== -1;
+
+            const docElement = document.documentElement || document.getElementsByTagName("html")[0];
+            const element = arguments[0] as HTMLElement;
+            let parent = element.parentElement;
+
+            if (!parent || isAbsolute(element)) {
                 return docElement;
             }
 
-            while (
-                parent.scrollHeight === parent.clientHeight &&
-                parent.scrollWidth === parent.clientWidth &&
-                parent !== docElement
-            ) {
+            while (parent !== docElement && !isScrollable(parent)) {
+                if (isAbsolute(parent)) {
+                    return docElement;
+                }
                 parent = parent.parentElement;
             }
 
