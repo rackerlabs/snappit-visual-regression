@@ -164,6 +164,10 @@ export class Snappit {
                 const message = `${shortPath} (${prettyDiff})`;
                 newShot.saveToPath(filePath);
                 this.handleException(new ScreenshotMismatchException(message));
+            } else {
+                // Do not save the screenshot if no changes detected, simply update timestamps
+                const now = new Date();
+                fs.utimesSync(filePath, now, now);
             }
 
         // No baseline image
